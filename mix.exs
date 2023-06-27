@@ -25,7 +25,10 @@ defmodule WorkflowEngine.MixProject do
       {:jason, "~> 1.2"},
       # Our fork of JsonLogic is used at runtime and during tests, but in production it has to be
       # provided by upstream application to avoid version conflicts
-      {:json_logic, github: "box-id/json_logic_elixir", tag: "1.0.0", only: [:dev, :test]}
+      {:json_logic, github: "box-id/json_logic_elixir", tag: "1.0.0", optional: true},
+      {:bxdk, github: "box-id/bxdk", tag: "0.21.0", optional: true},
+      {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
+      {:mox, "~> 1.0", only: :test}
     ]
   end
 end

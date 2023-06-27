@@ -14,11 +14,20 @@ defmodule WorkflowEngine.Actions.Api do
     operation = get_required(step, "operation")
     params_logic = get_required(step, "params")
 
-    module = build_module(entity)
+    module =
+      entity
+      |> build_module()
+      |> verify_module()
+
     function = build_function(operation)
 
     params = State.run_json_logic(state, params_logic)
-    arity = Enum.count(params)
+
+    unless is_list(params) do
+      raise WorkflowEngine.Error,
+        message: "Params logic must return a list. Result: #{inspect(params)}",
+        state: state
+    end
 
     try do
       Kernel.apply(module, function, params)
@@ -30,15 +39,17 @@ defmodule WorkflowEngine.Actions.Api do
           {:ok, {state, result}}
 
         # Streams aren't returned as result types by BXDK
-        stream when is_function(stream, 2) ->
+        stream when is_function(stream, 2) or is_struct(stream, Stream) ->
           {:ok, {state, stream}}
       end
     rescue
-      ArgumentError ->
+      UndefinedFunctionError ->
+        arity = Enum.count(params)
+
         reraise WorkflowEngine.Error,
                 [
                   message:
-                    "Resource {#{module}, #{function}, #{arity}} doesn't exist. (Arity counted from resolved params: #{Jason.encode!(params)})"
+                    "Function #{module}.#{function}/#{arity} doesn't exist. (Arity counted from resolved params: #{Jason.encode!(params)})"
                 ],
                 __STACKTRACE__
     end
@@ -51,17 +62,17 @@ defmodule WorkflowEngine.Actions.Api do
 
   defp get_required(step, key) do
     case Map.fetch(step, key) do
-      {:ok, value} ->
+      {:ok, value} when not is_nil(value) ->
         value
 
-      :error ->
+      _ ->
         raise WorkflowEngine.Error,
           message: "ApiAction: Missing required step parameter \"#{key}\"."
     end
   end
 
   defp build_module(entity) when is_binary(entity) do
-    entity = String.capitalize(entity, :ascii)
+    entity = Macro.camelize(entity)
 
     try do
       String.to_existing_atom("Elixir.BXDK.#{entity}")
@@ -70,6 +81,15 @@ defmodule WorkflowEngine.Actions.Api do
         reraise WorkflowEngine.Error,
                 [message: "BXDK entity \"#{entity}\" doesn't exist."],
                 __STACKTRACE__
+    end
+  end
+
+  defp verify_module(module) do
+    if BXDK.api_module?(module) do
+      module
+    else
+      raise WorkflowEngine.Error,
+        message: "Module \"#{module}\" is not a valid BXDK API module."
     end
   end
 

@@ -44,8 +44,8 @@ defmodule WorkflowEngine.Actions.ApiTest do
       end
     end
 
-    test "fails when missing 'params' param" do
-      assert_raise Error, ~r/Missing required step parameter "params"/, fn ->
+    test "fails when missing 'args' param" do
+      assert_raise Error, ~r/Missing required step parameter "args"/, fn ->
         build_workflow("tags", "get", nil)
         |> WorkflowEngine.evaluate()
       end
@@ -58,8 +58,8 @@ defmodule WorkflowEngine.Actions.ApiTest do
       end
     end
 
-    test "fails when params logic doesn't return a list" do
-      assert_raise Error, ~r/Params logic must return a list/, fn ->
+    test "fails when args logic doesn't return a list" do
+      assert_raise Error, ~r/Args logic must return a list/, fn ->
         build_workflow("tags", "get", %{})
         |> WorkflowEngine.evaluate()
       end
@@ -105,14 +105,14 @@ defmodule WorkflowEngine.Actions.ApiTest do
     end
   end
 
-  defp build_workflow(entity, operation, params) do
+  defp build_workflow(entity, operation, args) do
     %{
       "steps" => [
         %{
           "type" => "api",
           "entity" => entity,
           "operation" => operation,
-          "params" => params,
+          "args" => args,
           "result" => %{"as" => "result"}
         }
       ]

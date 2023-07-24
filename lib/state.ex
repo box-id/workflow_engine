@@ -81,7 +81,7 @@ defmodule WorkflowEngine.State do
 
   def finalize(%__MODULE__{} = state) do
     if instruction_depth(state) !== 0 do
-      Logger.warn(
+      Logger.warning(
         "WorkflowEngine.State: finalize called with instruction_depth = #{instruction_depth(state)}. Instruction pointer: #{inspect(state.instruction_pointer)}"
       )
     end

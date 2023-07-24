@@ -23,7 +23,7 @@ defmodule WorkflowEngine.MixProject do
     [
       {:ok, "~> 2.3"},
       {:jason, "~> 1.2"},
-      {:ex_minimatch, github: "box-id/ex_minimatch", ref: "919c51b"},
+      {:ex_minimatch, github: "box-id/ex_minimatch", ref: "ee65d07"},
       # Our fork of JsonLogic is used at runtime and during tests, but in production it has to be
       # provided by upstream application to avoid version conflicts
       {:json_logic, github: "box-id/json_logic_elixir", tag: "1.0.0", only: [:dev, :test]},

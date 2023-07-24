@@ -23,6 +23,7 @@ defmodule WorkflowEngine.MixProject do
     [
       {:ok, "~> 2.3"},
       {:jason, "~> 1.2"},
+      {:ex_minimatch, github: "box-id/ex_minimatch", ref: "919c51b"},
       # Our fork of JsonLogic is used at runtime and during tests, but in production it has to be
       # provided by upstream application to avoid version conflicts
       {:json_logic, github: "box-id/json_logic_elixir", tag: "1.0.0", only: [:dev, :test]},
@@ -30,7 +31,8 @@ defmodule WorkflowEngine.MixProject do
       # a suitable way of expressing a "minimum version" requirement.
       {:bxdk, github: "box-id/bxdk", tag: "0.21.0", only: [:dev, :test]},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
-      {:mox, "~> 1.0", only: :test}
+      {:mox, "~> 1.0", only: :test},
+      {:bypass, "~> 2.1", only: :test}
     ]
   end
 end

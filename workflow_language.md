@@ -68,18 +68,80 @@ Currently, no special attention is being paid to authentication, neither:
 
 Executes a generic HTTP action.
 
-```typescript
+```ts
 interface HTTPAction extends Action {
   type: "http";
   url: string;
-  method: string;
-  // should result in type: [string, string][];
+  method?: string;
+  path?: string | JsonLogic[];
   query?: JsonLogic;
-  // should result in type: Record<string, any>;
-  headers?: JsonLogic;
-  // should result in type: Record<string, any>;
-  body?: JsonLogic;
+  headers?: Record<string, string>;
+  body?: string | JsonLogic;
+  auth_token?: string | JsonLogic;
 }
+```
+
+#### `url`
+
+Mandatory request target, including schema (http/https), hostname, path and query.
+
+If the `WORKFLOW_ALLOWED_HTTP_HOSTS` environment variable is set to a comma-separated list of host
+names in the [minimatch](https://github.com/isaacs/minimatch) syntax, only these hosts are allowed
+to be contacted.
+
+#### `method`
+
+HTTP request method to use. Supports `get` (the default), `post`, `put`, `patch`, and `delete`.
+
+#### `path`
+
+An optional, additional argument for path which can be a list of JsonLogic segments that will be
+joined by `/`.
+
+Example:
+
+```json
+"path": ["api", "v1", %{"var": "params.entityType"}]
+```
+
+If `url` already contains a path, the value of this argument is appended to `url`'s path:
+
+- If `path` is absolute (starts with `/`), it fully replaces the `url`'s path.
+- If `path` is relative (starts with a segment or `./`), it is appended. If `url` doesn't end in
+  `/`, `path` replaces the last segment (or multiple if `path` starts with `../..`)
+
+#### `query`
+
+JsonLogic that resolves to an object that will be encoded to query string, values can be strings,
+numbers, booleans, or arrays of these types.
+
+Binary values will be passed through as-is.
+
+If `url` already contains a query string, `query` will be appended to it.
+
+#### `headers`
+
+Customize headers by specifying a map of key-value-pairs. Does not support JsonLogic.
+All header names will be downcased before sending to allow overriding the default headers.
+
+By default, `accept: application/json` will be sent (and a `content-type` header depending on `body`).
+
+#### `body`
+
+Request body. Supported for all methods, but only recommended for POST, PUT and PATCH.
+
+Can be a (pre-encoded) binary or a JsonLogic that resolves to either a map or a list. In the later
+case, `content-type: application/json` will be added to the request headers.
+
+#### `auth_token`
+
+String or JsonLogic. If set to/resolves to a string, it will be used as token in an `Authorization:
+Bearer <TOKEN>` header.
+
+Example:
+
+```json
+"auth_token": {"var": "params.user_token"}
 ```
 
 ## Controls

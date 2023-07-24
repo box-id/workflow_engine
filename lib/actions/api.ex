@@ -53,7 +53,7 @@ defmodule WorkflowEngine.Actions.Api do
 
       _ ->
         raise WorkflowEngine.Error,
-          message: "ApiAction: Missing required step parameter \"#{key}\"."
+          message: "Missing required step parameter \"#{key}\"."
     end
   end
 

@@ -141,6 +141,11 @@ defmodule WorkflowEngine do
         |> State.update_ip({:action, :api})
         |> Actions.Api.execute(step)
 
+      "http" ->
+        state
+        |> State.update_ip({:action, :http})
+        |> Actions.Http.execute(step)
+
       "_dummy" ->
         {:ok, Map.fetch!(step, "value")}
 

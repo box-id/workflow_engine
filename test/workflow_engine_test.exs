@@ -3,8 +3,12 @@ defmodule WorkflowEngineTest do
   use ExUnit.Case
   use OK.Pipe
 
+  import Mox
+
   alias WorkflowEngine
   alias WorkflowEngine.State
+
+  setup :verify_on_exit!
 
   test "empty workflow succeeds" do
     WorkflowEngine.evaluate(%{"steps" => []})
@@ -266,23 +270,112 @@ defmodule WorkflowEngineTest do
     end
   end
 
-  # FIXME: Add unknown action test
-  # FIXME: Add tests for storing actions' results
+  describe "actions" do
+    test "fails with appropriate error if action is unknown" do
+      assert_raise WorkflowEngine.Error, ~r/Unknown action "foo"/, fn ->
+        WorkflowEngine.evaluate(%{
+          "steps" => [
+            %{
+              "type" => "foo",
+              "do" => []
+            }
+          ]
+        })
+      end
+    end
 
-  # test "unknown action" do
-  #   {:error, reason} =
-  #     WorkflowEngine.evaluate(%{
-  #       "steps" => [
-  #         %{
-  #           "type" => "api",
-  #           "entity" => "tags",
-  #           "operation" => "get",
-  #           "params" => ["st32R"],
-  #           "result" => %{}
-  #         }
-  #       ]
-  #     })
+    test "allows extension by passing action map as option" do
+      ActionMock
+      |> expect(:execute, fn state, %{"data" => data} -> {:ok, {state, data}} end)
 
-  #   assert {{:validation, _}, _} = reason
-  # end
+      assert {:ok, ["expected result"]} =
+               WorkflowEngine.evaluate(
+                 %{
+                   "steps" => [
+                     %{
+                       "type" => "echo_action",
+                       "data" => "expected result",
+                       "result" => %{
+                         "as" => "foo_result"
+                       }
+                     },
+                     %{"yield" => %{"var" => "foo_result"}}
+                   ]
+                 },
+                 actions: %{"echo_action" => ActionMock}
+               )
+               ~> State.get_yielded()
+    end
+
+    test "extension actions report error results with correct instruction pointer & message" do
+      ActionMock
+      |> expect(:execute, fn _state, _step -> {:error, "Oops!"} end)
+
+      assert {:error, error} =
+               WorkflowEngine.evaluate(
+                 %{
+                   "steps" => [
+                     %{
+                       "type" => "echo_action"
+                     }
+                   ]
+                 },
+                 actions: %{"echo_action" => ActionMock}
+               )
+               ~> State.get_yielded()
+
+      assert error =~ "{:action, :echo_action}"
+      assert error =~ "Oops!"
+    end
+
+    test "allows storing result in variable" do
+      ActionMock
+      |> expect(:execute, fn state, %{"data" => data} -> {:ok, {state, data}} end)
+
+      assert {:ok, %{"key" => "data"}} =
+               WorkflowEngine.evaluate(
+                 %{
+                   "steps" => [
+                     %{
+                       "type" => "echo_action",
+                       "data" => %{"key" => "data"},
+                       "result" => %{
+                         "as" => "foo_result"
+                       }
+                     }
+                   ]
+                 },
+                 actions: %{"echo_action" => ActionMock}
+               )
+               ~> State.get_var("foo_result")
+    end
+
+    test "allows storing result in variable with JsonLogic transform" do
+      ActionMock
+      |> expect(:execute, fn state, %{"data" => data} -> {:ok, {state, data}} end)
+
+      assert {:ok, "data_suffix"} =
+               WorkflowEngine.evaluate(
+                 %{
+                   "steps" => [
+                     %{
+                       "type" => "echo_action",
+                       "data" => %{"key" => "data"},
+                       "result" => %{
+                         "as" => "foo_result",
+                         "transform" => %{
+                           "cat" => [
+                             %{"var" => "action.result.key"},
+                             "_suffix"
+                           ]
+                         }
+                       }
+                     }
+                   ]
+                 },
+                 actions: %{"echo_action" => ActionMock}
+               )
+               ~> State.get_var("foo_result")
+    end
+  end
 end

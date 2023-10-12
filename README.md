@@ -8,7 +8,10 @@ result_state =
     params: %{
       context: %{}
     },
-    json_logic: MyService.JsonLogic
+    json_logic: MyService.JsonLogic,
+    actions: %{
+      "foo" => MyApp.FooAction
+    }
   )
 ```
 

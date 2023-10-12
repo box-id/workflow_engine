@@ -4,6 +4,11 @@ defmodule WorkflowEngine do
   alias WorkflowEngine.Actions
   alias WorkflowEngine.State
 
+  @builtin_actions %{
+    "http" => Actions.Http,
+    "api" => Actions.Api
+  }
+
   @spec evaluate(map(), keyword()) :: {:error, any} | {:ok, State.t()}
   def evaluate(workflow, opts_or_state \\ [])
 
@@ -33,7 +38,8 @@ defmodule WorkflowEngine do
       vars: %{
         "params" => Keyword.get(opts, :params, %{})
       },
-      json_logic_mod: Keyword.get(opts, :json_logic, JsonLogic)
+      json_logic_mod: Keyword.get(opts, :json_logic, JsonLogic),
+      actions: Map.merge(@builtin_actions, Keyword.get(opts, :actions, %{}))
     }
 
     evaluate(state, workflow)
@@ -49,7 +55,8 @@ defmodule WorkflowEngine do
   end
 
   defp eval_steps(state, []) do
-    # Just because we're out of steps doesn't mean that we're finished with the whole workflow (could be a sub-workflow)
+    # Just because we're out of steps doesn't mean that we're finished with the whole workflow
+    # (could be a sub-workflow)
     if State.instruction_depth(state) == 0 do
       State.finalize(state)
     else
@@ -135,25 +142,17 @@ defmodule WorkflowEngine do
   defp eval_step(state, %{"type" => action_type} = step) do
     state = State.update_ip(state, :action)
 
-    case action_type do
-      "api" ->
-        state
-        |> State.update_ip({:action, :api})
-        |> Actions.Api.execute(step)
-
-      "http" ->
-        state
-        |> State.update_ip({:action, :http})
-        |> Actions.Http.execute(step)
-
-      "_dummy" ->
-        {:ok, Map.fetch!(step, "value")}
-
-      unknown ->
+    action_mod =
+      Map.get(state.actions, action_type) ||
         raise WorkflowEngine.Error,
-          message: "Unknown action type #{inspect(unknown)}",
+          message: "Unknown action #{inspect(action_type)}",
           state: state
-    end
+
+    # Safe to create atom from action_type because it was listed in the workflow's action map
+    state = State.update_ip(state, {:action, String.to_atom(action_type)})
+
+    # IDEA: Catch exceptions and wrap them in WorkflowEngine.Error?
+    action_mod.execute(state, step)
     |> case do
       {:ok, {state, result}} ->
         case Map.fetch(step, "result") do

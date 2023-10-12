@@ -1,6 +1,8 @@
 defmodule WorkflowEngine.State do
   defstruct vars: %{},
             json_logic_mod: JsonLogic,
+            # Place to put additional actions that can be used by the workflow.
+            actions: %{},
             yield_acc: [],
             current_step: nil,
             instruction_pointer: [],

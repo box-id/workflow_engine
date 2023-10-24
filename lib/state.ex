@@ -29,6 +29,35 @@ defmodule WorkflowEngine.State do
     update_in(state.vars, &Map.delete(&1, key))
   end
 
+  @doc """
+  Retrieves a nested value from the state's vars, using JsonLogic syntax.
+
+  The path can be calculated dynamically using JsonLogic by passing a map for `path`. Remember to
+  use the `cat` operator and place `.` between segments to form a valid string path.
+
+  When given a list of segments, they are joined together with `.` to form a path. In this case,
+  the segments are **not** evaluated as JsonLogic. This is done to avoid ambiguity with
+  JsonLogic's mechanism to provide a default value, which this method doesn't support.
+
+  ## Examples
+
+      iex> state = %State{vars: %{"a" => %{"b" => %{"c" => 1}}}}
+      iex> State.get_var_path(state, "a.b.c")
+      1
+
+      iex> state = %State{vars: %{
+      ...>   "a" => %{"foo" => 42, "bar" => 1},
+      ...>   "use_key" => "foo"
+      ...> }}
+      iex> State.get_var_path(state, %{"cat" => ["a.", %{"var" => "use_key"}]})
+      42
+  """
+  def get_var_path(%__MODULE__{} = state, path) when is_list(path),
+    do: get_var_path(state, Enum.join(path, "."))
+
+  def get_var_path(%__MODULE__{vars: vars, json_logic_mod: json_logic_mod}, path),
+    do: json_logic_mod.operation_var(path, vars)
+
   def snapshot_var(%__MODULE__{} = state, key) when is_binary(key) do
     case Map.fetch(state.vars, key) do
       :error ->

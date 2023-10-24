@@ -1,6 +1,6 @@
 defmodule WorkflowEngineTest do
   @moduledoc false
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use OK.Pipe
 
   import Mox

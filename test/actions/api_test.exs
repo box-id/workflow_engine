@@ -89,6 +89,7 @@ defmodule WorkflowEngine.Actions.ApiTest do
         build_workflow("tags", "get", [1])
         |> WorkflowEngine.evaluate()
         ~> WorkflowEngine.State.get_var("result")
+        # |> IO.inspect(label: "result")
 
       assert Enum.to_list(result) == [%{"id" => 1, "name" => "Test Tag"}]
     end

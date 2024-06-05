@@ -123,34 +123,34 @@ defmodule WorkflowEngine.Actions.ParseCsvTest do
       assert length(result) == 0
     end
 
-    test "download CSV with http action without ssl verification" do
+    test "Pass url with bad SSL certificate" do
       {:ok, result} =
         WorkflowEngine.evaluate(%{
           "steps" => [
             %{
               "type" => "http",
-              "url" => "https://people.sc.fsu.edu/~jburkardt/data/csv/hw_200.csv",
+              "url" => "https://expired.badssl.com/",
               "verify_ssl" => false,
               "result" => %{"as" => "csv_data"}
-            },
-            %{
-              "type" => "parse_csv",
-              "csv_settings" => %{
-                "linebreak" => "\n",
-                "separator" => ",",
-                "decimal" => "."
-              },
-              "data" => %{
-                "var" => "csv_data"
-              },
-              "result" => %{"as" => "result"}
             }
           ]
         })
         ~> WorkflowEngine.State.get_var("result")
-        ~> Enum.to_list()
+    end
 
-      assert length(result) > 0
+    test "Reject url with bad SSL certificate" do
+      {:error, result} =
+        WorkflowEngine.evaluate(%{
+          "steps" => [
+            %{
+              "type" => "http",
+              "url" => "https://expired.badssl.com/",
+              "result" => %{"as" => "csv_data"},
+              "max_retries" => 0
+            }
+          ]
+        })
+        ~> WorkflowEngine.State.get_var("result")
     end
   end
 

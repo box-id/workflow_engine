@@ -26,6 +26,9 @@ defmodule WorkflowEngine.Actions.Http do
 
     verify_ssl = Map.get(step, "verify_ssl", true)
 
+    max_retries =
+      Map.get(step, "max_retries", 3)
+
     request =
       Req.new(
         method: method,
@@ -33,8 +36,8 @@ defmodule WorkflowEngine.Actions.Http do
         follow_redirects: follow_redirects,
         auth: auth,
         body: body,
-        headers: headers
-        # connect_options: [transport_opts: [verify: :verify_none]]
+        headers: headers,
+        max_retries: max_retries
       )
       |> append_req(verify_ssl == false,
         connect_options: [transport_opts: [verify: :verify_none]]

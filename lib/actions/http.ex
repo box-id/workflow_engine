@@ -21,14 +21,23 @@ defmodule WorkflowEngine.Actions.Http do
     {body, body_type} = get_body(step, state)
     headers = get_headers(step, body_type)
 
+    follow_redirects =
+      Map.get(step, "follow_redirects", false)
+
+    verify_ssl = Map.get(step, "verify_ssl", true)
+
     request =
       Req.new(
         method: method,
         url: url,
-        follow_redirects: false,
+        follow_redirects: follow_redirects,
         auth: auth,
         body: body,
         headers: headers
+        # connect_options: [transport_opts: [verify: :verify_none]]
+      )
+      |> append_req(verify_ssl == false,
+        connect_options: [transport_opts: [verify: :verify_none]]
       )
       # We use our own `params` step because we want to use a different serializer & allow
       # passthrough of binary param strings.
@@ -116,6 +125,14 @@ defmodule WorkflowEngine.Actions.Http do
             message: "Target \"#{target}\" has not been explicitly allowed."
         end
     end
+  end
+
+  defp append_req(req, true, opts) do
+    Req.update(req, opts)
+  end
+
+  defp append_req(req, false, _opts) do
+    req
   end
 
   defp get_allowed_hosts,

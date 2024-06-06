@@ -4,9 +4,6 @@ defmodule WorkflowEngine.Actions.ParseCsvTest do
 
   import Mox
 
-  alias WorkflowEngine.Actions.ParseCsv
-  alias WorkflowEngine.Error
-
   setup :verify_on_exit!
 
   describe "CSV Action" do
@@ -124,7 +121,7 @@ defmodule WorkflowEngine.Actions.ParseCsvTest do
     end
 
     test "Pass url with bad SSL certificate" do
-      {:ok, result} =
+      {:ok, _result} =
         WorkflowEngine.evaluate(%{
           "steps" => [
             %{
@@ -139,7 +136,7 @@ defmodule WorkflowEngine.Actions.ParseCsvTest do
     end
 
     test "Reject url with bad SSL certificate" do
-      {:error, result} =
+      {:error, _result} =
         WorkflowEngine.evaluate(%{
           "steps" => [
             %{

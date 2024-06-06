@@ -8,8 +8,6 @@ defmodule WorkflowEngine.Actions.ParseCsv do
 
   @impl WorkflowEngine.Action
 
-  # "step" => %{"type" => "csv", data: "data", url: "/url", csv_settings: %{"linebreak" => "\n", "delimiter" => ",", "decimal" => "."}, "fields" => %{"name" , "age" }
-
   NimbleCSV.define(CSVComma,
     separator: ",",
     escape: "\""

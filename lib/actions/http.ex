@@ -24,7 +24,7 @@ defmodule WorkflowEngine.Actions.Http do
     follow_redirects =
       Map.get(step, "follow_redirects", false)
 
-    verify_ssl = Map.get(step, "verify_ssl", true)
+    allow_insecure = Map.get(step, "allow_insecure", false)
 
     max_retries =
       Map.get(step, "max_retries", 3)
@@ -39,8 +39,11 @@ defmodule WorkflowEngine.Actions.Http do
         headers: headers,
         max_retries: max_retries
       )
-      |> append_req(verify_ssl == false,
-        connect_options: [transport_opts: [verify: :verify_none]]
+      |> Req.update(
+        if(allow_insecure == true,
+          do: [connect_options: [transport_opts: [verify: :verify_none]]],
+          else: []
+        )
       )
       # We use our own `params` step because we want to use a different serializer & allow
       # passthrough of binary param strings.
@@ -128,14 +131,6 @@ defmodule WorkflowEngine.Actions.Http do
             message: "Target \"#{target}\" has not been explicitly allowed."
         end
     end
-  end
-
-  defp append_req(req, true, opts) do
-    Req.update(req, opts)
-  end
-
-  defp append_req(req, false, _opts) do
-    req
   end
 
   defp get_allowed_hosts,

@@ -1,5 +1,5 @@
 defmodule WorkflowEngine.Actions.HTTPTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   use OK.Pipe
 
   import ExUnit.CaptureLog
@@ -14,7 +14,11 @@ defmodule WorkflowEngine.Actions.HTTPTest do
   setup do
     bypass = Bypass.open()
     bypass_base_url = "http://localhost:#{bypass.port}/"
-    Process.put(:_workflow_allowed_http_hosts_during_test, "http://localhost")
+
+    Process.put(
+      :_workflow_allowed_http_hosts_during_test,
+      "http://localhost,https://expired.badssl.com"
+    )
 
     {:ok, bypass: bypass, url: bypass_base_url}
   end
@@ -401,6 +405,91 @@ defmodule WorkflowEngine.Actions.HTTPTest do
 
       assert error =~ "bad_request"
       assert error =~ "Something went wrong"
+    end
+  end
+
+  describe "HTTP Action - Redirect" do
+    test "redirects when parameter is set to true", %{bypass: bypass, url: url} do
+      Bypass.expect_once(bypass, "GET", "/", fn conn ->
+        conn
+        |> Plug.Conn.put_resp_header("location", url <> "redirected")
+        |> Plug.Conn.resp(302, "")
+      end)
+
+      Bypass.expect_once(bypass, "GET", "/redirected", fn conn ->
+        send_json(conn, 200, %{foo: 42})
+      end)
+
+      {:ok, result} =
+        WorkflowEngine.evaluate(%{
+          "steps" => [
+            %{
+              "type" => "http",
+              "url" => url,
+              "follow_redirects" => true,
+              "result" => %{"as" => "result"}
+            }
+          ]
+        })
+        ~> WorkflowEngine.State.get_var("result")
+
+      assert %{"foo" => 42} = result
+    end
+
+    test "fails with unallowed redirect", %{bypass: bypass, url: url} do
+      Bypass.expect_once(bypass, "GET", "/", fn conn ->
+        conn
+        |> Plug.Conn.put_resp_header("location", url <> "redirected")
+        |> Plug.Conn.resp(302, "Resource can be found...")
+      end)
+
+      {:ok, result} =
+        WorkflowEngine.evaluate(%{
+          "steps" => [
+            %{
+              "type" => "http",
+              "url" => url,
+              "follow_redirects" => false,
+              "result" => %{"as" => "result"}
+            }
+          ]
+        })
+        ~> WorkflowEngine.State.get_var("result")
+
+      assert "Resource can be found..." == result
+    end
+  end
+
+  describe "HTTP Action - SSL" do
+    test "accepts URL with bad certificate" do
+      assert {:ok, _result} =
+               WorkflowEngine.evaluate(%{
+                 "steps" => [
+                   %{
+                     "type" => "http",
+                     "url" => "https://expired.badssl.com/",
+                     "allow_insecure" => true,
+                     "result" => %{"as" => "result"}
+                   }
+                 ]
+               })
+               ~> WorkflowEngine.State.get_var("result")
+    end
+
+    test "Reject url with bad SSL certificate" do
+      assert {:error, result} =
+               WorkflowEngine.evaluate(%{
+                 "steps" => [
+                   %{
+                     "type" => "http",
+                     "url" => "https://expired.badssl.com/",
+                     "result" => %{"as" => "csv_data"},
+                     "max_retries" => 0
+                   }
+                 ]
+               })
+
+      assert result =~ "Certificate Expired"
     end
   end
 

@@ -56,8 +56,8 @@ defmodule WorkflowEngine.Actions.ParseCsv do
     end
   end
 
-  def get_data(%{"data" => jsonLogic} = _step, state) when is_map(jsonLogic) do
-    {:ok, WorkflowEngine.State.run_json_logic(state, jsonLogic)}
+  def get_data(%{"data" => json_logic} = _step, state) when is_map(json_logic) do
+    {:ok, WorkflowEngine.State.run_json_logic(state, json_logic)}
   end
 
   def get_data(%{"data" => data} = _step, _state) when is_binary(data) do
@@ -65,6 +65,6 @@ defmodule WorkflowEngine.Actions.ParseCsv do
   end
 
   def get_data(_step, _state) do
-    {:error, "Missing required step parameter \"url\" or \"data\"."}
+    {:error, "Missing required step parameter \"data\"."}
   end
 end

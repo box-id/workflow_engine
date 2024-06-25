@@ -32,7 +32,8 @@ defmodule WorkflowEngine.MixProject do
       {:bxdk, github: "box-id/bxdk", tag: "0.24.0", only: [:dev, :test]},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
       {:mox, "~> 1.0", only: :test},
-      {:bypass, "~> 2.1", only: :test}
+      {:bypass, "~> 2.1", only: :test},
+      {:config_helpers, "~> 1.0"}
     ]
   end
 end

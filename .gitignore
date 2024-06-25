@@ -24,3 +24,5 @@ workflow_engine-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+config.env

@@ -20,8 +20,9 @@ defmodule WorkflowEngine.Actions.DocumentAiTest do
     test "test", %{api_key: api_key, endpoint: endpoint} do
       DocumentAi.execute(%{}, %{
         "type" => "document_ai",
-        "model_id" => "model_id",
-        "document_url" => "document_url",
+        "model_id" => "prebuilt-read",
+        "document_url" =>
+          "https://raw.githubusercontent.com/Azure-Samples/cognitive-services-REST-api-samples/master/curl/form-recognizer/rest-api/read.png",
         "api_key" => api_key,
         "endpoint" => endpoint
       })

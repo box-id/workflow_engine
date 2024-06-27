@@ -199,9 +199,11 @@ defmodule WorkflowEngine.Actions.Http do
   defp get_body(step, state) do
     case Map.get(step, "body") do
       body when is_map(body) or is_list(body) ->
+        # State.run_json_logic(state, body)
         json =
-          State.run_json_logic(state, body)
+          body
           |> Jason.encode!()
+          |> IO.inspect(label: "json")
 
         {json, :json}
 
@@ -235,9 +237,17 @@ defmodule WorkflowEngine.Actions.Http do
 
   @spec unwrap_response({:error, Mint.TransportError.t()} | {:ok, Req.Response.t()}, any) ::
           {:error, {atom, any}} | {:ok, any}
-  def unwrap_response({:ok, %Req.Response{status: status, body: body}}, req) do
+  def unwrap_response({:ok, %Req.Response{status: status, body: body, headers: headers}}, req) do
     if status < 400 do
-      {:ok, body}
+      # {:ok, body
+      result =
+        if is_map(body) do
+          Map.put(body, "_headers", headers)
+        else
+          %{"_headers" => headers}
+        end
+
+      {:ok, result}
     else
       Logger.warning(
         "HttpAction: #{req_to_string(req)} failed with status #{status}: #{inspect(body)}"

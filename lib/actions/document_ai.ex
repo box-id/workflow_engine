@@ -3,40 +3,41 @@ defmodule WorkflowEngine.Actions.DocumentAi do
   Executes a request against the Azure Document AI API.
   """
 
+  use OK.Pipe
+
   @behaviour WorkflowEngine.Action
 
   require Logger
 
+  @default_document_ai_api_version "2023-07-31"
+
   def execute(state, %{"type" => "document_ai"} = step) do
-    # Example: curl -v -i POST "{endpoint}/documentintelligence/documentModels/{modelId}:analyze?api-version=2024-02-29-preview" -H "Content-Type: application/json" -H "Ocp-Apim-Subscription-Key: {key}" --data-ascii "{'urlSource': '{your-document-url}'}"
-
-    # Example: curl -v -i POST "https://document-ai-trial.cognitiveservices.azure.com/documentintelligence/documentModels/prebuilt-read:analyze?api-version=2023-07-31" -H "Content-Type: application/json" -H "Ocp-Apim-Subscription-Key: 9068c65f95e24d088aa45a5fb444832d" --data-ascii "{'urlSource': 'https://raw.githubusercontent.com/Azure-Samples/cognitive-services-REST-api-samples/master/curl/form-recognizer/rest-api/read.png'}"
-
-    # Example: curl -v -i POST "https://francecentral.api.cognitive.microsoft.com/documentintelligence/documentModels/prebuilt-read:analyze?api-version=2023-07-31" -H "Content-Type: application/json" -H "Ocp-Apim-Subscription-Key: 665f7f58e1514f8cac2f03393eadd4d6" --data-ascii "{'urlSource': 'https://raw.githubusercontent.com/Azure-Samples/cognitive-services-REST-api-samples/master/curl/form-recognizer/rest-api/read.png'}"
-
     with {:ok, model_id} <- get_model_id(step),
          {:ok, document_url} <- get_document_url(step),
          {:ok, api_key} <- get_api_key(step),
-         {:ok, endpoint} <- get_endpoint(step) do
-      IO.inspect(model_id, label: "model_id")
-      IO.inspect(document_url, label: "document_url")
-      IO.inspect(api_key, label: "api_key")
-      IO.inspect(endpoint, label: "endpoint")
+         {:ok, endpoint} <- get_endpoint(step),
+         {:ok, request} <- request_document_analysis(api_key, endpoint, model_id, document_url),
+         {:ok, operation_location} <- get_operation_location(request),
+         {:ok, result} <- request_analyzed_results(api_key, operation_location) do
+      # step = %{
+      #   "url" => endpoint,
+      #   "path" => "/formrecognizer/documentModels/#{model_id}:analyze",
+      #   "type" => "http",
+      #   "method" => "POST",
+      #   "params" => "api-version=#{@default_document_ai_api_version}",
+      #   # "params" => %{
+      #   #   "api-version" => Map.get(step, "api_version", @default_document_ai_api_version)
+      #   # },
+      #   "headers" => %{
+      #     "Ocp-Apim-Subscription-Key" => api_key
+      #   },
+      #   # "body" => ["urlSource", document_url]
+      #   "body" => %{"urlSource" => document_url},
+      #   "result" => %{"as" => "result"}
+      # }
 
-      step = %{
-        "type" => "http",
-        "method" => "POST",
-        "params" => "api-version=2024-02-29-preview",
-        "headers" => %{
-          "Ocp-Apim-Subscription-Key" => api_key
-        },
-        "body" => ["urlSource", document_url],
-        "url" => endpoint,
-        "path" => "/documentintelligence/documentModels/#{model_id}:analyze"
-      }
-
-      WorkflowEngine.evaluate(%{"steps" => [step]})
-      |> IO.inspect()
+      IO.inspect(result)
+      {:ok, state}
     else
       {:error, reason} ->
         Logger.warning("DocumentAiAction: #{inspect(reason)}")
@@ -57,4 +58,50 @@ defmodule WorkflowEngine.Actions.DocumentAi do
 
   defp get_endpoint(%{"endpoint" => endpoint}) when is_binary(endpoint), do: OK.wrap(endpoint)
   defp get_endpoint(_), do: {:error, "endpoint is required"}
+
+  defp request_document_analysis(api_key, endpoint, model_id, document_url) do
+    Req.new(
+      method: "POST",
+      url: endpoint <> "/formrecognizer/documentModels/#{model_id}:analyze",
+      json: %{"urlSource" => document_url},
+      headers: %{
+        "Ocp-Apim-Subscription-Key" => api_key
+      },
+      params: %{
+        # FIXME: do dynamic api-version
+        "api-version" => @default_document_ai_api_version
+      }
+    )
+    |> Req.request()
+  end
+
+  defp get_operation_location(%{headers: headers}) do
+    with {_, value} <- List.keyfind(headers, "operation-location", 0) do
+      {:ok, value}
+    else
+      _ ->
+        {:error, "Operation location not found in headers"}
+    end
+  end
+
+  defp get_operation_location(_), do: {:error, "Request did not return any headers"}
+
+  defp request_analyzed_results(api_key, operation_location) do
+    IO.inspect("requesting analyzed results")
+    Process.sleep(1000)
+
+    {:ok, result} =
+      Req.new(
+        method: "GET",
+        url: operation_location,
+        headers: %{
+          "Ocp-Apim-Subscription-Key" => api_key
+        }
+      )
+      |> Req.request()
+
+    if result.body["status"] != "succeeded",
+      do: request_analyzed_results(api_key, operation_location),
+      else: result
+  end
 end

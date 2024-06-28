@@ -20,9 +20,9 @@ defmodule WorkflowEngine.Actions.DocumentAiTest do
     test "test", %{api_key: api_key, endpoint: endpoint} do
       DocumentAi.execute(%{}, %{
         "type" => "document_ai",
-        "model_id" => "prebuilt-read",
+        "model_id" => "rekord-fenster-delivery-note",
         "document_url" =>
-          "https://raw.githubusercontent.com/Azure-Samples/cognitive-services-REST-api-samples/master/curl/form-recognizer/rest-api/read.png",
+          "https://images.box-id.com/insecure/w:0/h:0/el:t/rt:fit/g:ce:0:0/aHR0cHM6Ly9zMy5ldS1jZW50cmFsLTEuYW1hem9uYXdzLmNvbTo0NDMvbWVkaWFib3hpZC9iMjM2NzYxY2IyODM3Y2M0ZWU2YzU1NzdhNDA1MWI3OQ==.jpg",
         "api_key" => api_key,
         "endpoint" => endpoint
       })

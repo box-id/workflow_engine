@@ -12,31 +12,19 @@ defmodule WorkflowEngine.Actions.DocumentAi do
   @default_document_ai_api_version "2023-07-31"
 
   def execute(state, %{"type" => "document_ai"} = step) do
-    with {:ok, model_id} <- get_model_id(step),
-         {:ok, document_url} <- get_document_url(step),
-         {:ok, api_key} <- get_api_key(step),
-         {:ok, endpoint} <- get_endpoint(step),
-         {:ok, request} <- request_document_analysis(api_key, endpoint, model_id, document_url),
+    with {:ok, model_id} <- get_property(step, "model_id"),
+         {:ok, document_url} <- get_property(step, "document_url"),
+         {:ok, api_key} <- get_property(step, "api_key"),
+         {:ok, endpoint} <- get_property(step, "endpoint"),
+         {:ok, api_version} <-
+           get_property(step, "api_version", @default_document_ai_api_version),
+         {:ok, request} <-
+           request_document_analysis(api_key, endpoint, model_id, document_url, api_version),
          {:ok, operation_location} <- get_operation_location(request),
-         {:ok, result} <- request_analyzed_results(api_key, operation_location) do
-      # step = %{
-      #   "url" => endpoint,
-      #   "path" => "/formrecognizer/documentModels/#{model_id}:analyze",
-      #   "type" => "http",
-      #   "method" => "POST",
-      #   "params" => "api-version=#{@default_document_ai_api_version}",
-      #   # "params" => %{
-      #   #   "api-version" => Map.get(step, "api_version", @default_document_ai_api_version)
-      #   # },
-      #   "headers" => %{
-      #     "Ocp-Apim-Subscription-Key" => api_key
-      #   },
-      #   # "body" => ["urlSource", document_url]
-      #   "body" => %{"urlSource" => document_url},
-      #   "result" => %{"as" => "result"}
-      # }
+         {:ok, result} <-
+           request_analyzed_results(api_key, operation_location, System.os_time(:millisecond)) do
+      # TODO: parse results and update state
 
-      IO.inspect(result)
       {:ok, state}
     else
       {:error, reason} ->
@@ -45,21 +33,15 @@ defmodule WorkflowEngine.Actions.DocumentAi do
     end
   end
 
-  defp get_model_id(%{"model_id" => model_id}) when is_binary(model_id), do: OK.wrap(model_id)
-  defp get_model_id(_), do: {:error, "model_id is required"}
+  defp get_property(step, property, default \\ nil) do
+    case Map.get(step, property, default) do
+      nil -> {:error, "#{property} is required"}
+      value when is_binary(value) -> OK.wrap(value)
+      _ -> {:error, "#{property} must be a string"}
+    end
+  end
 
-  defp get_document_url(%{"document_url" => document_url}) when is_binary(document_url),
-    do: OK.wrap(document_url)
-
-  defp get_document_url(_), do: {:error, "document_url is required"}
-
-  defp get_api_key(%{"api_key" => api_key}) when is_binary(api_key), do: OK.wrap(api_key)
-  defp get_api_key(_), do: {:error, "api_key is required"}
-
-  defp get_endpoint(%{"endpoint" => endpoint}) when is_binary(endpoint), do: OK.wrap(endpoint)
-  defp get_endpoint(_), do: {:error, "endpoint is required"}
-
-  defp request_document_analysis(api_key, endpoint, model_id, document_url) do
+  defp request_document_analysis(api_key, endpoint, model_id, document_url, api_version) do
     Req.new(
       method: "POST",
       url: endpoint <> "/formrecognizer/documentModels/#{model_id}:analyze",
@@ -68,15 +50,14 @@ defmodule WorkflowEngine.Actions.DocumentAi do
         "Ocp-Apim-Subscription-Key" => api_key
       },
       params: %{
-        # FIXME: do dynamic api-version
-        "api-version" => @default_document_ai_api_version
+        "api-version" => api_version
       }
     )
     |> Req.request()
   end
 
   defp get_operation_location(%{headers: headers}) do
-    with {_, value} <- List.keyfind(headers, "operation-location", 0) do
+    with {"operation-location", value} <- List.keyfind(headers, "operation-location", 0) do
       {:ok, value}
     else
       _ ->
@@ -84,24 +65,34 @@ defmodule WorkflowEngine.Actions.DocumentAi do
     end
   end
 
-  defp get_operation_location(_), do: {:error, "Request did not return any headers"}
+  defp request_analyzed_results(api_key, operation_location, initial_call_ts) do
+    with {:ok, :continue} <- compare_ts(initial_call_ts),
+         {:ok, %{status: 200} = result} <-
+           Req.get(
+             operation_location,
+             headers: %{
+               "Ocp-Apim-Subscription-Key" => api_key
+             }
+           ) do
+      # INFO: the DocumentAI platform returns a 200 status code even if the operation is not
+      # completed but in progress, so we retry until the status is "succeeded" or the operation
+      # times out
+      if result.body["status"] != "succeeded" do
+        Process.sleep(1000)
+        request_analyzed_results(api_key, operation_location, initial_call_ts)
+      else
+        {:ok, result.body}
+      end
+    else
+      error ->
+        Logger.error("DocumentAiAction failed: #{inspect(error)}")
+        {:error, error}
+    end
+  end
 
-  defp request_analyzed_results(api_key, operation_location) do
-    IO.inspect("requesting analyzed results")
-    Process.sleep(1000)
-
-    {:ok, result} =
-      Req.new(
-        method: "GET",
-        url: operation_location,
-        headers: %{
-          "Ocp-Apim-Subscription-Key" => api_key
-        }
-      )
-      |> Req.request()
-
-    if result.body["status"] != "succeeded",
-      do: request_analyzed_results(api_key, operation_location),
-      else: result
+  defp compare_ts(initial_call_ts) do
+    if System.os_time(:millisecond) > initial_call_ts + 10000,
+      do: {:error, "Operation timed out"},
+      else: {:ok, :continue}
   end
 end

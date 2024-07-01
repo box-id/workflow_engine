@@ -6,7 +6,8 @@ defmodule WorkflowEngine do
 
   @builtin_actions %{
     "http" => Actions.Http,
-    "api" => Actions.Api
+    "api" => Actions.Api,
+    "document_ai" => Actions.DocumentAi
   }
 
   @spec evaluate(map(), keyword()) :: {:error, any} | {:ok, State.t()}

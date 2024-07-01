@@ -9,24 +9,26 @@ defmodule WorkflowEngine.Actions.DocumentAi do
 
   require Logger
 
+  alias WorkflowEngine.State
+
   @default_document_ai_api_version "2023-07-31"
 
   def execute(state, %{"type" => "document_ai"} = step) do
-    with {:ok, model_id} <- get_property(step, "model_id"),
-         {:ok, document_url} <- get_property(step, "document_url"),
+    with {:ok, model_id} <- get_property(state, step, "model_id"),
+         {:ok, document_url} <- get_property(state, step, "document_url"),
          api_key <- get_env(:api_key),
          endpoint = get_env(:endpoint),
          {:ok, api_version} <-
-           get_property(step, "api_version", @default_document_ai_api_version),
+           get_property(state, step, "api_version", @default_document_ai_api_version),
          {:ok, request} <-
            request_document_analysis(api_key, endpoint, model_id, document_url, api_version),
          {:ok, operation_location} <- get_operation_location(request),
          {:ok, result} <-
            request_analyzed_results(api_key, operation_location, System.os_time(:millisecond)) do
       # TODO: parse results and update state
-      # IO.inspect(result)
+      IO.inspect(result)
 
-      {:ok, state}
+      {:ok, { state, %{} }}
     else
       {:error, reason} ->
         Logger.warning("DocumentAiAction: #{inspect(reason)}")
@@ -39,10 +41,13 @@ defmodule WorkflowEngine.Actions.DocumentAi do
     |> Keyword.fetch!(atom)
   end
 
-  defp get_property(step, property, default \\ nil) do
+  defp get_property(state, step, property, default \\ nil) do
     case Map.get(step, property, default) do
       nil -> {:error, "#{property} is required"}
       value when is_binary(value) -> OK.wrap(value)
+      value when is_map(value) or is_list(value) ->
+        State.run_json_logic(state, value)
+      |> OK.wrap()
       _ -> {:error, "#{property} must be a string"}
     end
   end
@@ -80,7 +85,6 @@ defmodule WorkflowEngine.Actions.DocumentAi do
                "Ocp-Apim-Subscription-Key" => api_key
              }
            ) do
-
       # INFO: the DocumentAI platform returns a 200 status code even if the operation is not
       # completed but in progress, so we retry until the status is "succeeded" or the operation
       # times out

@@ -14,8 +14,8 @@ defmodule WorkflowEngine.Actions.DocumentAi do
   def execute(state, %{"type" => "document_ai"} = step) do
     with {:ok, model_id} <- get_property(step, "model_id"),
          {:ok, document_url} <- get_property(step, "document_url"),
-         {:ok, api_key} <- get_property(step, "api_key"),
-         {:ok, endpoint} <- get_property(step, "endpoint"),
+         api_key <- get_env(:api_key),
+         endpoint = get_env(:endpoint),
          {:ok, api_version} <-
            get_property(step, "api_version", @default_document_ai_api_version),
          {:ok, request} <-
@@ -24,6 +24,7 @@ defmodule WorkflowEngine.Actions.DocumentAi do
          {:ok, result} <-
            request_analyzed_results(api_key, operation_location, System.os_time(:millisecond)) do
       # TODO: parse results and update state
+      # IO.inspect(result)
 
       {:ok, state}
     else
@@ -31,6 +32,11 @@ defmodule WorkflowEngine.Actions.DocumentAi do
         Logger.warning("DocumentAiAction: #{inspect(reason)}")
         {:error, reason}
     end
+  end
+
+  defp get_env(atom) do
+    Application.get_env(:workflow_engine, WorkflowEngine.Actions.DocumentAi)
+    |> Keyword.fetch!(atom)
   end
 
   defp get_property(step, property, default \\ nil) do

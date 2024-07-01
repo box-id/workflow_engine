@@ -80,16 +80,29 @@ defmodule WorkflowEngine.Actions.DocumentAi do
                "Ocp-Apim-Subscription-Key" => api_key
              }
            ) do
+
       # INFO: the DocumentAI platform returns a 200 status code even if the operation is not
       # completed but in progress, so we retry until the status is "succeeded" or the operation
       # times out
       # Documentation: https://learn.microsoft.com/en-us/rest/api/aiservices/document-models/get-analyze-result
 
-      if result.body["status"] != "succeeded" do
-        Process.sleep(1000)
-        request_analyzed_results(api_key, operation_location, initial_call_ts)
-      else
-        {:ok, result.body}
+      case result.body["status"] do
+        "succeeded" ->
+          {:ok, result.body}
+
+        "running" ->
+          Process.sleep(1000)
+          request_analyzed_results(api_key, operation_location, initial_call_ts)
+
+        "notStarted" ->
+          Process.sleep(1000)
+          request_analyzed_results(api_key, operation_location, initial_call_ts)
+
+        "failed" ->
+          {:error, "Operation failed"}
+
+        _ ->
+          {:error, "Unknown status" <> result.body["status"]}
       end
     else
       error ->

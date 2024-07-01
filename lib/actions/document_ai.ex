@@ -77,6 +77,8 @@ defmodule WorkflowEngine.Actions.DocumentAi do
       # INFO: the DocumentAI platform returns a 200 status code even if the operation is not
       # completed but in progress, so we retry until the status is "succeeded" or the operation
       # times out
+      # Documentation: https://learn.microsoft.com/en-us/rest/api/aiservices/document-models/get-analyze-result
+
       if result.body["status"] != "succeeded" do
         Process.sleep(1000)
         request_analyzed_results(api_key, operation_location, initial_call_ts)
@@ -91,7 +93,7 @@ defmodule WorkflowEngine.Actions.DocumentAi do
   end
 
   defp compare_ts(initial_call_ts) do
-    if System.os_time(:millisecond) > initial_call_ts + 10000,
+    if System.os_time(:millisecond) > initial_call_ts + :timer.seconds(10),
       do: {:error, "Operation timed out"},
       else: {:ok, :continue}
   end

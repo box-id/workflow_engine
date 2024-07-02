@@ -25,10 +25,15 @@ defmodule WorkflowEngine.Actions.DocumentAi do
          {:ok, operation_location} <- get_operation_location(request),
          {:ok, result} <-
            request_analyzed_results(api_key, operation_location, System.os_time(:millisecond)) do
-      # TODO: parse results and update state
-      IO.inspect(result)
+      document = List.first(result["analyzeResult"]["documents"])
 
-      {:ok, { state, %{} }}
+      payload = %{
+        "document" => document,
+        "confidence" => document["confidence"],
+        "analyze_result_url" => operation_location
+      }
+
+      {:ok, {state, payload}}
     else
       {:error, reason} ->
         Logger.warning("DocumentAiAction: #{inspect(reason)}")
@@ -43,12 +48,18 @@ defmodule WorkflowEngine.Actions.DocumentAi do
 
   defp get_property(state, step, property, default \\ nil) do
     case Map.get(step, property, default) do
-      nil -> {:error, "#{property} is required"}
-      value when is_binary(value) -> OK.wrap(value)
+      nil ->
+        {:error, "#{property} is required"}
+
+      value when is_binary(value) ->
+        OK.wrap(value)
+
       value when is_map(value) or is_list(value) ->
         State.run_json_logic(state, value)
-      |> OK.wrap()
-      _ -> {:error, "#{property} must be a string"}
+        |> OK.wrap()
+
+      _ ->
+        {:error, "#{property} must be a string"}
     end
   end
 

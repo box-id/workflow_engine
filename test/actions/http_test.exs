@@ -406,6 +406,28 @@ defmodule WorkflowEngine.Actions.HTTPTest do
       assert error =~ "bad_request"
       assert error =~ "Something went wrong"
     end
+
+    test "doesn't convert received Latin-1 plaintext response to utf8", %{
+      bypass: bypass,
+      url: url
+    } do
+      Bypass.expect_once(bypass, "GET", "/", fn conn ->
+        conn
+        |> Plug.Conn.put_resp_header("content-type", "text/plain; charset=ISO-8859-1")
+        |> Plug.Conn.resp(
+          200,
+          # The string "Hällo Wörld!" encoded in ISO-8859-1
+          "H\xE4lo W\xF6rld!"
+        )
+      end)
+
+      {:ok, result} =
+        build_workflow(%{"url" => url})
+        |> WorkflowEngine.evaluate()
+        ~> WorkflowEngine.State.get_var("result")
+
+      assert "H\xE4lo W\xF6rld!" = result
+    end
   end
 
   describe "HTTP Action - Redirect" do

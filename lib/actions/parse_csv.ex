@@ -24,47 +24,62 @@ defmodule WorkflowEngine.Actions.ParseCsv do
   )
 
   def execute(state, %{"type" => "parse_csv", "csv_settings" => csv_settings} = step) do
-    {:ok, data} = get_data(step, state)
+    with {:ok, data} <- get_data(step, state) do
+      csv_module = get_csv_module(csv_settings)
 
-    csv_module = get_csv_module(csv_settings)
+      rows =
+        data
+        |> trim_bom()
+        |> List.wrap()
+        |> csv_module.to_line_stream()
+        |> csv_module.parse_stream(skip_headers: false)
 
-    rows =
-      data
-      |> List.wrap()
-      |> csv_module.to_line_stream()
-      |> csv_module.parse_stream(skip_headers: false)
+      header_row = Stream.take(rows, 1) |> Enum.at(0)
 
-    header_row = Stream.take(rows, 1) |> Enum.at(0)
+      content_rows =
+        Stream.drop(rows, 1)
+        |> Stream.map(fn row ->
+          Enum.zip(header_row, row)
+          |> Map.new()
+        end)
 
-    content_rows =
-      Stream.drop(rows, 1)
-      |> Stream.map(fn row ->
-        Enum.zip(header_row, row)
-        |> Map.new()
-      end)
-
-    {:ok, {state, content_rows}}
+      {:ok, {state, content_rows}}
+    else
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   def get_csv_module(csv_settings) do
-    separator = Map.get(csv_settings, "separator")
-
-    case separator do
+    case csv_settings["separator"] do
       ";" -> CSVSemiColon
       "\t" -> CSVTab
       _ -> CSVComma
     end
   end
 
-  def get_data(%{"data" => json_logic} = _step, state) when is_map(json_logic) do
+  @spec get_data(map(), WorkflowEngine.State.t()) :: {:ok, any()} | {:error, String.t()}
+  defp get_data(%{"data" => json_logic}, state) when is_map(json_logic) do
     {:ok, WorkflowEngine.State.run_json_logic(state, json_logic)}
   end
 
-  def get_data(%{"data" => data} = _step, _state) when is_binary(data) do
+  defp get_data(%{"data" => data}, _state) when is_binary(data) do
     {:ok, data}
   end
 
-  def get_data(_step, _state) do
+  defp get_data(_step, _state) do
     {:error, "Missing required step parameter \"data\"."}
+  end
+
+  def trim_bom(<<239, 187, 191, rest::binary>>) do
+    rest
+  end
+
+  def trim_bom([<<239, 187, 191, first_row::binary>> | rest]) do
+    [first_row | rest]
+  end
+
+  def trim_bom(data) do
+    data
   end
 end

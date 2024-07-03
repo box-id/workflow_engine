@@ -71,15 +71,15 @@ defmodule WorkflowEngine.Actions.ParseCsv do
     {:error, "Missing required step parameter \"data\"."}
   end
 
-  def trim_bom(<<239, 187, 191, rest::binary>>) do
+  defp trim_bom(<<239, 187, 191, rest::binary>>) do
     rest
   end
 
-  def trim_bom([<<239, 187, 191, first_row::binary>> | rest]) do
+  defp trim_bom([<<239, 187, 191, first_row::binary>> | rest]) do
     [first_row | rest]
   end
 
-  def trim_bom(data) do
+  defp trim_bom(data) do
     data
   end
 end

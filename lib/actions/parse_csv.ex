@@ -44,9 +44,6 @@ defmodule WorkflowEngine.Actions.ParseCsv do
         end)
 
       {:ok, {state, content_rows}}
-    else
-      {:error, reason} ->
-        {:error, reason}
     end
   end
 

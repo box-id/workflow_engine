@@ -56,6 +56,7 @@ defmodule WorkflowEngine.Actions.DocumentAi do
 
       value when is_map(value) or is_list(value) ->
         State.run_json_logic(state, value)
+        |> OK.required("JsonLogic could not resolve property: #{property}")
         |> OK.wrap()
 
       _ ->

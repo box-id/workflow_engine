@@ -1,4 +1,4 @@
-ExUnit.configure(exclude: [:external_service_skip])
+ExUnit.configure(exclude: [:external_service])
 ExUnit.start()
 
 Mox.defmock(BXDKTagsMock, for: BXDK.Tags)

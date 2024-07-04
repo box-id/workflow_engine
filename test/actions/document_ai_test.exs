@@ -10,7 +10,7 @@ defmodule WorkflowEngine.Actions.DocumentAiTest do
   end
 
   describe "Document AI" do
-    @tag :external_service_skip
+    @tag :external_service
     test "Params in body" do
       DocumentAi.execute(%{}, %{
         "type" => "document_ai",
@@ -20,7 +20,7 @@ defmodule WorkflowEngine.Actions.DocumentAiTest do
       })
     end
 
-    @tag :external_service_skip
+    @tag :external_service
     test "Params in JSON logic" do
       build_workflow(%{
         "model_id" => %{

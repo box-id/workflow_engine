@@ -21,14 +21,29 @@ defmodule WorkflowEngine.Actions.Http do
     {body, body_type} = get_body(step, state)
     headers = get_headers(step, body_type)
 
+    follow_redirects =
+      Map.get(step, "follow_redirects", false)
+
+    allow_insecure = Map.get(step, "allow_insecure", false)
+
+    max_retries =
+      Map.get(step, "max_retries", 3)
+
     request =
       Req.new(
         method: method,
         url: url,
-        follow_redirects: false,
+        follow_redirects: follow_redirects,
         auth: auth,
         body: body,
-        headers: headers
+        headers: headers,
+        max_retries: max_retries
+      )
+      |> Req.update(
+        if(allow_insecure == true,
+          do: [connect_options: [transport_opts: [verify: :verify_none]]],
+          else: []
+        )
       )
       # We use our own `params` step because we want to use a different serializer & allow
       # passthrough of binary param strings.

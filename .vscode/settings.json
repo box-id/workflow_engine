@@ -1,4 +1,5 @@
 {
   "editor.rulers": [98],
-  "cSpell.words": ["BXDK", "defmock", "keyfind", "Minimatch", "MQTT"]
+  "cSpell.words": ["BXDK", "defmock", "keyfind", "Minimatch", "MQTT"],
+  "editor.defaultFormatter": "JakeBecker.elixir-ls"
 }

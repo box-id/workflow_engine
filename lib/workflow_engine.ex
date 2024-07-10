@@ -7,6 +7,7 @@ defmodule WorkflowEngine do
   @builtin_actions %{
     "http" => Actions.Http,
     "api" => Actions.Api,
+    "parse_csv" => Actions.ParseCsv,
     "document_ai" => Actions.DocumentAi
   }
 

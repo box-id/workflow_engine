@@ -33,7 +33,8 @@ defmodule WorkflowEngine.MixProject do
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
       {:mox, "~> 1.0", only: :test},
       {:bypass, "~> 2.1", only: :test},
-      {:config_helpers, "~> 1.0"}
+      {:config_helpers, "~> 1.0"},
+      {:nimble_csv, "~> 1.2.0"}
     ]
   end
 end

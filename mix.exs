@@ -7,7 +7,9 @@ defmodule WorkflowEngine.MixProject do
       version: "0.5.0",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      aliases: aliases(),
+      cli: cli()
     ]
   end
 
@@ -35,6 +37,16 @@ defmodule WorkflowEngine.MixProject do
       {:bypass, "~> 2.1", only: :test},
       {:config_helpers, "~> 1.0"},
       {:nimble_csv, "~> 1.2.0"}
+    ]
+  end
+
+  def cli do
+    [preferred_envs: ["test.including_external": :test]]
+  end
+
+  defp aliases do
+    [
+      "test.including_external": ["test --include external_service"]
     ]
   end
 end

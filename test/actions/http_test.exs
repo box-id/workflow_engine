@@ -483,6 +483,7 @@ defmodule WorkflowEngine.Actions.HTTPTest do
   end
 
   describe "HTTP Action - SSL" do
+    @tag :external_service
     test "accepts URL with bad certificate" do
       assert {:ok, _result} =
                WorkflowEngine.evaluate(%{
@@ -498,6 +499,7 @@ defmodule WorkflowEngine.Actions.HTTPTest do
                ~> WorkflowEngine.State.get_var("result")
     end
 
+    @tag :external_service
     test "Reject url with bad SSL certificate" do
       assert {:error, result} =
                WorkflowEngine.evaluate(%{

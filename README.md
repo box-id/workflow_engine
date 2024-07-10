@@ -26,3 +26,13 @@ def deps do
   ]
 end
 ```
+
+## Tests
+
+Run tests using `mix test` or, during development, `mix test.watch`.
+
+Tests touching external systems should be tagged with `@tag :external_service` s.t.
+they are (by default) skipped, which keeps the execution of the test suite fast and reliable.
+
+To include those tests as well, use `mix test.including_external` or the `--include
+external_service` flag.

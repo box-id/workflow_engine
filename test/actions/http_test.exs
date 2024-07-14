@@ -375,7 +375,7 @@ defmodule WorkflowEngine.Actions.HTTPTest do
   end
 
   describe "HTTP Action - Results" do
-    test "returns parsed JSON result", %{bypass: bypass, url: url} do
+    test "returns parsed JSON result by default", %{bypass: bypass, url: url} do
       Bypass.expect_once(bypass, "GET", "/", fn conn ->
         send_json(conn, %{foo: 42})
       end)
@@ -386,6 +386,19 @@ defmodule WorkflowEngine.Actions.HTTPTest do
         ~> WorkflowEngine.State.get_var("result")
 
       assert %{"foo" => 42} = result
+    end
+
+    test "returns raw response when `decode_body = false`", %{bypass: bypass, url: url} do
+      Bypass.expect_once(bypass, "GET", "/", fn conn ->
+        send_json(conn, %{foo: 42})
+      end)
+
+      {:ok, result} =
+        build_workflow(%{"url" => url, "decode_body" => false})
+        |> WorkflowEngine.evaluate()
+        ~> WorkflowEngine.State.get_var("result")
+
+      assert ~S'{"foo":42}' = result
     end
 
     test "returns error for error response", %{bypass: bypass, url: url} do

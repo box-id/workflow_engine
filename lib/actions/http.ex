@@ -26,8 +26,9 @@ defmodule WorkflowEngine.Actions.Http do
 
     allow_insecure = Map.get(step, "allow_insecure", false)
 
-    max_retries =
-      Map.get(step, "max_retries", 3)
+    max_retries = Map.get(step, "max_retries", 3)
+
+    decode_body = Map.get(step, "decode_body", true)
 
     request =
       Req.new(
@@ -37,7 +38,8 @@ defmodule WorkflowEngine.Actions.Http do
         auth: auth,
         body: body,
         headers: headers,
-        max_retries: max_retries
+        max_retries: max_retries,
+        decode_body: decode_body
       )
       |> Req.update(
         if(allow_insecure == true,

@@ -23,8 +23,9 @@ defmodule WorkflowEngine.Actions.ParseCsv do
     escape: "\""
   )
 
-  def execute(state, %{"type" => "parse_csv", "csv_settings" => csv_settings} = step) do
+  def execute(state, %{"type" => "parse_csv"} = step) do
     with {:ok, data} <- get_data(step, state) do
+      csv_settings = Map.get(step, "csv_settings", %{})
       csv_module = get_csv_module(csv_settings)
 
       rows =

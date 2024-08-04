@@ -35,12 +35,15 @@ defmodule WorkflowEngine.Actions.ParseCsv do
         |> csv_module.to_line_stream()
         |> csv_module.parse_stream(skip_headers: false)
 
-      header_row = Stream.take(rows, 1) |> Enum.at(0)
+      {header_fields, content_rows} = get_header_and_rows(rows, step)
 
       content_rows =
-        Stream.drop(rows, 1)
-        |> Stream.map(fn row ->
-          Enum.zip(header_row, row)
+        Stream.map(content_rows, fn row ->
+          # Fill in missing field values with nils.
+          fields_and_nils = Stream.concat(row, Stream.cycle([nil]))
+
+          header_fields
+          |> Enum.zip(fields_and_nils)
           |> Map.new()
         end)
 
@@ -79,5 +82,30 @@ defmodule WorkflowEngine.Actions.ParseCsv do
 
   defp trim_bom(data) do
     data
+  end
+
+  defp get_header_and_rows(rows, step) do
+    case Map.get(step, "columns") || [] do
+      # Empty or nil columns means that the first row is the header.
+      [] ->
+        header_fields = Stream.take(rows, 1) |> Enum.at(0)
+        content_rows = Stream.drop(rows, 1)
+
+        {header_fields, content_rows}
+
+      # Manual columns are provided. `csv_settings.skip_header` can be used to skip original
+      # header row.
+      columns when is_list(columns) ->
+        header_fields = columns
+
+        content_rows =
+          if get_in(step, ["csv_settings", "skip_header"]) do
+            Stream.drop(rows, 1)
+          else
+            rows
+          end
+
+        {header_fields, content_rows}
+    end
   end
 end

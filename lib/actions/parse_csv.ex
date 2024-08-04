@@ -88,10 +88,10 @@ defmodule WorkflowEngine.Actions.ParseCsv do
     case Map.get(step, "columns") || [] do
       # Empty or nil columns means that the first row is the header.
       [] ->
-        header_fields = Stream.take(rows, 1) |> Enum.at(0)
-        content_rows = Stream.drop(rows, 1)
+        # Don't use `StreamSplit.pop/1` because it would throw on empty `rows`.
+        {header_fields, content_rows} = StreamSplit.take_and_drop(rows, 1)
 
-        {header_fields, content_rows}
+        {List.first(header_fields), content_rows}
 
       # Manual columns are provided. `csv_settings.skip_header` can be used to skip original
       # header row.

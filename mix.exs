@@ -36,7 +36,8 @@ defmodule WorkflowEngine.MixProject do
       {:mox, "~> 1.0", only: :test},
       {:bypass, "~> 2.1", only: :test},
       {:config_helpers, "~> 1.0"},
-      {:nimble_csv, "~> 1.2.0"}
+      {:nimble_csv, "~> 1.2.0"},
+      {:stream_split, "~> 0.1.7"}
     ]
   end
 

@@ -24,10 +24,8 @@ defmodule WorkflowEngine.Actions.ParseCsv do
   )
 
   def execute(state, %{"type" => "parse_csv"} = step) do
-    with {:ok, data} <- get_data(step, state) do
-      csv_settings = Map.get(step, "csv_settings", %{})
-      csv_module = get_csv_module(csv_settings)
-
+    with {:ok, data} <- get_data(step, state),
+         {:ok, csv_module} <- get_csv_module(Map.get(step, "csv_settings", %{})) do
       rows =
         data
         |> trim_bom()
@@ -51,13 +49,21 @@ defmodule WorkflowEngine.Actions.ParseCsv do
     end
   end
 
-  def get_csv_module(csv_settings) do
-    case csv_settings["separator"] do
+  def get_csv_module(%{"separator" => separator}) do
+    case separator do
       ";" -> CSVSemiColon
+      "semi" -> CSVSemiColon
+      "semicolon" -> CSVSemiColon
       "\t" -> CSVTab
-      _ -> CSVComma
+      "tab" -> CSVTab
+      "," -> CSVComma
+      "comma" -> CSVComma
+      _ -> {:error, "Invalid CSV separator: #{inspect(separator)}"}
     end
+    |> OK.wrap()
   end
+
+  def get_csv_module(_), do: {:ok, CSVComma}
 
   @spec get_data(map(), WorkflowEngine.State.t()) :: {:ok, any()} | {:error, String.t()}
   defp get_data(%{"data" => json_logic}, state) when is_map(json_logic) do

@@ -24,6 +24,23 @@ defmodule WorkflowEngine.Actions.ParseCsvTest do
              ]
     end
 
+    test "Parse CSV with comma using alias for separator option" do
+      {:ok, result} =
+        build_workflow(csv_settings: [separator: "comma"])
+        |> WorkflowEngine.evaluate(
+          params: %{
+            "csv_data" => "name,age\nJohn,30\nJane,25"
+          }
+        )
+        ~> WorkflowEngine.State.get_var("content_rows")
+        ~> Enum.to_list()
+
+      assert result == [
+               %{"name" => "John", "age" => "30"},
+               %{"name" => "Jane", "age" => "25"}
+             ]
+    end
+
     test "Parse CSV with semicolon" do
       {:ok, result} =
         build_workflow(csv_settings: [separator: ";"])
@@ -227,6 +244,18 @@ defmodule WorkflowEngine.Actions.ParseCsvTest do
                %{"name" => "John", "age" => "30"},
                %{"name" => "Jane", "age" => "25"}
              ]
+    end
+
+    test "fails when given invalid separator" do
+      {:error, reason} =
+        build_workflow(csv_settings: [separator: "foo"])
+        |> WorkflowEngine.evaluate(
+          params: %{
+            "csv_data" => "name,age\nJohn,30\nJane,25"
+          }
+        )
+
+      assert reason =~ "Invalid CSV separator"
     end
   end
 

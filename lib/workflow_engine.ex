@@ -153,33 +153,29 @@ defmodule WorkflowEngine do
     # Safe to create atom from action_type because it was listed in the workflow's action map
     state = State.update_ip(state, {:action, String.to_atom(action_type)})
 
-    # IDEA: Catch exceptions and wrap them in WorkflowEngine.Error?
-    action_mod.execute(state, step)
-    |> case do
-      {:ok, {state, result}} ->
-        case Map.fetch(step, "result") do
-          {:ok, result_description} ->
-            state
-            |> State.update_ip({:action, :store_result})
-            |> store_result(result, result_description)
-            |> OK.wrap()
+    try do
+      action_mod.execute(state, step)
+      |> case do
+        {:ok, {state, result}} ->
+          case Map.fetch(step, "result") do
+            {:ok, result_description} ->
+              state
+              |> State.update_ip({:action, :store_result})
+              |> store_result(result, result_description)
+              |> OK.wrap()
 
-          :error ->
-            {:ok, state}
-        end
+            :error ->
+              {:ok, state}
+          end
 
-      {:error, reason} ->
-        # IDEA: Some errors/error types might be allowed in the future
+        {:error, reason} ->
+          # IDEA: Some errors/error types might be allowed in the future
 
-        # Reuse WorkflowEngine.Error's state-to-string behavior
-        message =
-          %WorkflowEngine.Error{
-            message: "Workflow action failed with reason:\n#{inspect(reason)}",
-            state: state
-          }
-          |> Exception.message()
-
-        {:error, message}
+          wrap_error(state, reason)
+      end
+    rescue
+      error ->
+        wrap_error(state, error)
     end
   end
 
@@ -206,5 +202,20 @@ defmodule WorkflowEngine do
     raise WorkflowEngine.Error,
       message: "Result description missing or invalid 'as'.",
       state: state
+  end
+
+  # Some errors are already in a format that we can use when they're rescued during execution
+  defp wrap_error(_state, error = %WorkflowEngine.Error{}), do: {:error, Exception.message(error)}
+
+  # Reuse WorkflowEngine.Error's state-to-string behavior
+  defp wrap_error(state, error) do
+    message =
+      %WorkflowEngine.Error{
+        message: "Workflow action failed with reason:\n#{inspect(error)}",
+        state: state
+      }
+      |> Exception.message()
+
+    {:error, message}
   end
 end

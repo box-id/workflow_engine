@@ -4,8 +4,6 @@ defmodule WorkflowEngine.Actions.HTTPTest do
 
   import ExUnit.CaptureLog
 
-  alias WorkflowEngine.Error
-
   defmodule __MODULE__.JsonLogic do
     use JsonLogic.Base,
       extensions: [JsonLogic.Extensions.Obj]
@@ -25,24 +23,27 @@ defmodule WorkflowEngine.Actions.HTTPTest do
 
   describe "HTTP Action - URL Validation" do
     test "fails when missing 'url' param" do
-      assert_raise Error, ~r/Missing required step parameter "url"/, fn ->
+      {:error, error} =
         build_workflow()
         |> WorkflowEngine.evaluate()
-      end
+
+      assert error =~ "Missing required step parameter \"url\""
     end
 
     test "fails when given invalid 'url' param" do
-      assert_raise Error, ~r/Invalid URL/, fn ->
+      {:error, error} =
         build_workflow(%{"url" => "not a url"})
         |> WorkflowEngine.evaluate()
-      end
+
+      assert error =~ "Invalid URL"
     end
 
     test "fails when given 'url' that is not allow-listed" do
-      assert_raise Error, ~r/has not been explicitly allowed/, fn ->
+      {:error, error} =
         build_workflow(%{"url" => "https://test.example.com"})
         |> WorkflowEngine.evaluate()
-      end
+
+      assert error =~ "has not been explicitly allowed"
     end
 
     test "performs request against valid URL and path", %{bypass: bypass, url: url} do
@@ -86,10 +87,11 @@ defmodule WorkflowEngine.Actions.HTTPTest do
     end
 
     test "fails when given invalid 'path'", %{url: url} do
-      assert_raise Error, ~r/Invalid path/, fn ->
+      {:error, error} =
         build_workflow(%{"url" => url, "path" => %{"some" => "map"}})
         |> WorkflowEngine.evaluate()
-      end
+
+      assert error =~ "Invalid path"
     end
 
     test "defaults to / when given explicit NULL path", %{bypass: bypass, url: url} do
@@ -113,10 +115,11 @@ defmodule WorkflowEngine.Actions.HTTPTest do
 
   describe "HTTP Action - Headers" do
     test "fails when given invalid 'headers'", %{url: url} do
-      assert_raise Error, ~r/Invalid headers/, fn ->
+      {:error, error} =
         build_workflow(%{"url" => url, "headers" => "not a map"})
         |> WorkflowEngine.evaluate()
-      end
+
+      assert error =~ "Invalid headers"
     end
 
     test "sends accept JSON header by default", %{bypass: bypass, url: url} do
@@ -220,10 +223,11 @@ defmodule WorkflowEngine.Actions.HTTPTest do
     end
 
     test "fails when given invalid 'method'", %{url: url} do
-      assert_raise Error, ~r/Invalid HTTP method/, fn ->
+      {:error, error} =
         build_workflow(%{"url" => url, "method" => "not a method"})
         |> WorkflowEngine.evaluate()
-      end
+
+      assert error =~ "Invalid HTTP method"
     end
   end
 

@@ -12,7 +12,8 @@ defmodule WorkflowEngine.Actions.ApiTest do
         build_workflow(nil, "create", [])
         |> WorkflowEngine.evaluate()
 
-      assert error =~ "Missing required step parameter \"entity\""
+      assert error.recoverable == false
+      assert error.message =~ "Missing required step parameter \"entity\""
     end
 
     test "fails when given nonexistent 'entity' param" do
@@ -20,7 +21,8 @@ defmodule WorkflowEngine.Actions.ApiTest do
         build_workflow("nonexistent", "create", [])
         |> WorkflowEngine.evaluate()
 
-      assert error =~ "doesn't exist"
+      assert error.recoverable == false
+      assert error.message =~ "doesn't exist"
     end
 
     test "fails when given non-entity api module" do
@@ -28,7 +30,8 @@ defmodule WorkflowEngine.Actions.ApiTest do
         build_workflow("internal_api", "get", [])
         |> WorkflowEngine.evaluate()
 
-      assert error =~ "not a valid BXDK API module"
+      assert error.recoverable == false
+      assert error.message =~ "not a valid BXDK API module"
     end
 
     test "fails when missing 'operation' param" do
@@ -36,7 +39,8 @@ defmodule WorkflowEngine.Actions.ApiTest do
         build_workflow("tags", nil, [])
         |> WorkflowEngine.evaluate()
 
-      assert error =~ "Missing required step parameter \"operation\""
+      assert error.recoverable == false
+      assert error.message =~ "Missing required step parameter \"operation\""
     end
 
     test "fails when given nonexistent function" do
@@ -44,7 +48,8 @@ defmodule WorkflowEngine.Actions.ApiTest do
         build_workflow("tags", "incarcerate", [])
         |> WorkflowEngine.evaluate()
 
-      assert error =~ "doesn't exist"
+      assert error.recoverable == false
+      assert error.message =~ "doesn't exist"
     end
 
     test "fails when missing 'args' param" do
@@ -52,7 +57,8 @@ defmodule WorkflowEngine.Actions.ApiTest do
         build_workflow("tags", "get", nil)
         |> WorkflowEngine.evaluate()
 
-      assert error =~ "Missing required step parameter \"args\""
+      assert error.recoverable == false
+      assert error.message =~ "Missing required step parameter \"args\""
     end
 
     test "fails when calling function with wrong arity" do
@@ -60,7 +66,8 @@ defmodule WorkflowEngine.Actions.ApiTest do
         build_workflow("tags", "get", [])
         |> WorkflowEngine.evaluate()
 
-      assert error =~ "BXDK.Tags.get/0 doesn't exist"
+      assert error.recoverable == false
+      assert error.message =~ "BXDK.Tags.get/0 doesn't exist"
     end
 
     test "fails when args logic doesn't return a list" do
@@ -68,7 +75,8 @@ defmodule WorkflowEngine.Actions.ApiTest do
         build_workflow("tags", "get", %{})
         |> WorkflowEngine.evaluate()
 
-      assert error =~ "Args logic must return a list"
+      assert error.recoverable == false
+      assert error.message =~ "Args logic must return a list"
     end
   end
 
@@ -107,7 +115,8 @@ defmodule WorkflowEngine.Actions.ApiTest do
         build_workflow("tags", "get", [1])
         |> WorkflowEngine.evaluate()
 
-      assert error =~ "Something went wrong"
+      assert error.recoverable == true
+      assert error.message =~ "Something went wrong"
     end
 
     test "returns error for non-existent BXDK entity" do
@@ -115,7 +124,8 @@ defmodule WorkflowEngine.Actions.ApiTest do
         build_workflow("asset", "audit", ["a1234567", true])
         |> WorkflowEngine.evaluate()
 
-      assert error =~ "ApiAction: BXDK entity \"Asset\" doesn't exist"
+      assert error.recoverable == false
+      assert error.message =~ "ApiAction: BXDK entity \"Asset\" doesn't exist"
     end
   end
 

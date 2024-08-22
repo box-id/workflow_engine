@@ -15,24 +15,31 @@ defmodule WorkflowEngine do
   def evaluate(workflow, opts_or_state \\ [])
 
   def evaluate(%State{} = state, %{"steps" => steps}) do
-    steps_with_index = steps |> List.wrap() |> Enum.with_index()
-    eval_steps(state, steps_with_index)
+    try do
+      steps_with_index = steps |> List.wrap() |> Enum.with_index()
+      eval_steps(state, steps_with_index)
+    rescue
+      error ->
+        wrap_error(error, state)
+    end
   end
 
-  def evaluate(%State{} = state, steps) when is_list(steps) do
-    steps_with_index = steps |> Enum.with_index()
-    eval_steps(state, steps_with_index)
-  end
-
-  def evaluate(%State{} = state, step) when is_map(step) do
-    steps_with_index = step |> List.wrap() |> Enum.with_index()
-    eval_steps(state, steps_with_index)
+  def evaluate(%State{} = state, steps) when is_list(steps) or is_map(steps) do
+    try do
+      steps_with_index = steps |> List.wrap() |> Enum.with_index()
+      eval_steps(state, steps_with_index)
+    rescue
+      error ->
+        wrap_error(error, state)
+    end
   end
 
   def evaluate(%State{} = state, _workflow) do
-    raise WorkflowEngine.Error,
+    %WorkflowEngine.Error{
       message: "Unable to get steps from workflow",
       state: state
+    }
+    |> wrap_error(state)
   end
 
   def evaluate(workflow, opts) when is_list(opts) do
@@ -171,11 +178,11 @@ defmodule WorkflowEngine do
         {:error, reason} ->
           # IDEA: Some errors/error types might be allowed in the future
 
-          wrap_error(state, reason)
+          wrap_error(reason, state, recoverable: true)
       end
     rescue
       error ->
-        wrap_error(state, error)
+        wrap_error(error, state)
     end
   end
 
@@ -205,17 +212,25 @@ defmodule WorkflowEngine do
   end
 
   # Some errors are already in a format that we can use when they're rescued during execution
-  defp wrap_error(_state, error = %WorkflowEngine.Error{}), do: {:error, Exception.message(error)}
+  defp wrap_error(error, state, opts \\ [])
 
-  # Reuse WorkflowEngine.Error's state-to-string behavior
-  defp wrap_error(state, error) do
-    message =
+  defp wrap_error(error = %WorkflowEngine.Error{}, _state, opts),
+    do: {:error, merge_wrap_opts(error, opts)}
+
+  defp wrap_error(error, state, opts) do
+    error =
       %WorkflowEngine.Error{
         message: "Workflow action failed with reason:\n#{inspect(error)}",
         state: state
       }
-      |> Exception.message()
+      |> merge_wrap_opts(opts)
 
-    {:error, message}
+    {:error, error}
+  end
+
+  defp merge_wrap_opts(error, opts) do
+    Map.merge(error, %{
+      recoverable: Keyword.get(opts, :recoverable, false)
+    })
   end
 end

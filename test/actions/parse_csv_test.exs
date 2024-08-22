@@ -247,7 +247,7 @@ defmodule WorkflowEngine.Actions.ParseCsvTest do
     end
 
     test "fails when given invalid separator" do
-      {:error, reason} =
+      {:error, error} =
         build_workflow(csv_settings: [separator: "foo"])
         |> WorkflowEngine.evaluate(
           params: %{
@@ -255,7 +255,9 @@ defmodule WorkflowEngine.Actions.ParseCsvTest do
           }
         )
 
-      assert reason =~ "Invalid CSV separator"
+      # INFO: is this supposed to be recoverable? likely not?
+      # assert error.recoverable == false
+      assert error.message =~ "Invalid CSV separator"
     end
   end
 

@@ -257,7 +257,7 @@ defmodule WorkflowEngineTest do
     end
 
     test "fails with appropriate error if value is not iterable" do
-      assert_raise WorkflowEngine.Error, ~r/Loop value not iterable/, fn ->
+      {:error, error} =
         WorkflowEngine.evaluate(%{
           "steps" => [
             %{
@@ -266,13 +266,15 @@ defmodule WorkflowEngineTest do
             }
           ]
         })
-      end
+
+      assert error.recoverable == false
+      assert error.message =~ "Loop value not iterable"
     end
   end
 
   describe "actions" do
     test "fails with appropriate error if action is unknown" do
-      assert_raise WorkflowEngine.Error, ~r/Unknown action "foo"/, fn ->
+      {:error, error} =
         WorkflowEngine.evaluate(%{
           "steps" => [
             %{
@@ -281,7 +283,9 @@ defmodule WorkflowEngineTest do
             }
           ]
         })
-      end
+
+      assert error.recoverable == false
+      assert error.message =~ "Unknown action \"foo\""
     end
 
     test "allows extension by passing action map as option" do
@@ -324,8 +328,8 @@ defmodule WorkflowEngineTest do
                )
                ~> State.get_yielded()
 
-      assert error =~ "{:action, :echo_action}"
-      assert error =~ "Oops!"
+      assert Exception.message(error) =~ "{:action, :echo_action}"
+      assert Exception.message(error) =~ "Oops!"
     end
 
     test "allows storing result in variable" do

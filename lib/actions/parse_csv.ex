@@ -25,7 +25,7 @@ defmodule WorkflowEngine.Actions.ParseCsv do
 
   def execute(state, %{"type" => "parse_csv"} = step) do
     with {:ok, data} <- get_data(step, state),
-         {:ok, csv_module} <- get_csv_module(Map.get(step, "csv_settings", %{})) do
+         {:ok, csv_module} <- get_csv_module(state, Map.get(step, "csv_settings", %{})) do
       rows =
         data
         |> trim_bom()
@@ -49,23 +49,44 @@ defmodule WorkflowEngine.Actions.ParseCsv do
     end
   end
 
-  def get_csv_module(%{"separator" => separator}) do
+  def get_csv_module(state, %{"separator" => separator}) do
     case separator do
-      ";" -> CSVSemiColon
-      "semi" -> CSVSemiColon
-      "semicolon" -> CSVSemiColon
-      "\t" -> CSVTab
-      "tab" -> CSVTab
-      "," -> CSVComma
-      "comma" -> CSVComma
-      _ -> {:error, {:parse_csv_error, "Invalid CSV separator: #{inspect(separator)}"}}
+      ";" ->
+        CSVSemiColon
+
+      "semi" ->
+        CSVSemiColon
+
+      "semicolon" ->
+        CSVSemiColon
+
+      "\t" ->
+        CSVTab
+
+      "tab" ->
+        CSVTab
+
+      "," ->
+        CSVComma
+
+      "comma" ->
+        CSVComma
+
+      _ ->
+        {:error,
+         %WorkflowEngine.Error{
+           message: "Invalid CSV separator: #{inspect(separator)}",
+           state: state,
+           recoverable: false
+         }}
     end
     |> OK.wrap()
   end
 
-  def get_csv_module(_), do: {:ok, CSVComma}
+  def get_csv_module(_state, _), do: {:ok, CSVComma}
 
-  @spec get_data(map(), WorkflowEngine.State.t()) :: {:ok, any()} | {:error, String.t()}
+  @spec get_data(map(), WorkflowEngine.State.t()) ::
+          {:ok, any()} | {:error, WorkflowEngine.Error.t()}
   defp get_data(%{"data" => json_logic}, state) when is_map(json_logic) do
     {:ok, WorkflowEngine.State.run_json_logic(state, json_logic)}
   end
@@ -74,8 +95,13 @@ defmodule WorkflowEngine.Actions.ParseCsv do
     {:ok, data}
   end
 
-  defp get_data(_step, _state) do
-    {:error, {:parse_csv_error, "Missing required step parameter \"data\"."}}
+  defp get_data(_step, state) do
+    {:error,
+     %WorkflowEngine.Error{
+       message: "Missing required step parameter \"data\".",
+       state: state,
+       recoverable: false
+     }}
   end
 
   defp trim_bom(<<239, 187, 191, rest::binary>>) do

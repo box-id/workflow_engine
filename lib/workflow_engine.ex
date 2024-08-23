@@ -15,23 +15,19 @@ defmodule WorkflowEngine do
   def evaluate(workflow, opts_or_state \\ [])
 
   def evaluate(%State{} = state, %{"steps" => steps}) do
-    try do
-      steps_with_index = steps |> List.wrap() |> Enum.with_index()
-      eval_steps(state, steps_with_index)
-    rescue
-      error ->
-        wrap_error(error, state)
-    end
+    steps_with_index = steps |> List.wrap() |> Enum.with_index()
+    eval_steps(state, steps_with_index)
+  rescue
+    error ->
+      wrap_error(error, state)
   end
 
   def evaluate(%State{} = state, steps) when is_list(steps) or is_map(steps) do
-    try do
-      steps_with_index = steps |> List.wrap() |> Enum.with_index()
-      eval_steps(state, steps_with_index)
-    rescue
-      error ->
-        wrap_error(error, state)
-    end
+    steps_with_index = steps |> List.wrap() |> Enum.with_index()
+    eval_steps(state, steps_with_index)
+  rescue
+    error ->
+      wrap_error(error, state)
   end
 
   def evaluate(%State{} = state, _workflow) do
@@ -175,9 +171,8 @@ defmodule WorkflowEngine do
               {:ok, state}
           end
 
-        # Handle unrecoverable errors
-        {:error, {type, _message} = reason} when type in [:validation, :parse_csv_error] ->
-          wrap_error(reason, state)
+        {:error, %{recoverable: recoverable} = reason} ->
+          wrap_error(reason, state, recoverable: recoverable)
 
         {:error, reason} ->
           wrap_error(reason, state, recoverable: true)
@@ -216,23 +211,19 @@ defmodule WorkflowEngine do
   # Some errors are already in a format that we can use when they're rescued during execution
   defp wrap_error(error, state, opts \\ [])
 
-  defp wrap_error(error = %WorkflowEngine.Error{}, _state, opts),
-    do: {:error, merge_wrap_opts(error, opts)}
+  defp wrap_error(%WorkflowEngine.Error{} = error, _state, opts),
+    do:
+      %{
+        error
+        | recoverable: Keyword.get(opts, :recoverable, false)
+      }
+      |> OK.failure()
 
-  defp wrap_error(error, state, opts) do
-    error =
+  defp wrap_error(error, state, opts),
+    do:
       %WorkflowEngine.Error{
         message: "Workflow action failed with reason:\n#{inspect(error)}",
         state: state
       }
-      |> merge_wrap_opts(opts)
-
-    {:error, error}
-  end
-
-  defp merge_wrap_opts(error, opts) do
-    Map.merge(error, %{
-      recoverable: Keyword.get(opts, :recoverable, false)
-    })
-  end
+      |> wrap_error(state, opts)
 end

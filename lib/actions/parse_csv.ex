@@ -58,7 +58,7 @@ defmodule WorkflowEngine.Actions.ParseCsv do
       "tab" -> CSVTab
       "," -> CSVComma
       "comma" -> CSVComma
-      _ -> {:error, "Invalid CSV separator: #{inspect(separator)}"}
+      _ -> {:error, {:parse_csv_error, "Invalid CSV separator: #{inspect(separator)}"}}
     end
     |> OK.wrap()
   end
@@ -75,7 +75,7 @@ defmodule WorkflowEngine.Actions.ParseCsv do
   end
 
   defp get_data(_step, _state) do
-    {:error, "Missing required step parameter \"data\"."}
+    {:error, {:parse_csv_error, "Missing required step parameter \"data\"."}}
   end
 
   defp trim_bom(<<239, 187, 191, rest::binary>>) do

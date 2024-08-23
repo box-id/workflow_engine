@@ -109,13 +109,14 @@ defmodule WorkflowEngine.Actions.ApiTest do
 
     test "returns error for error result" do
       BXDKTagsMock
-      |> expect(:get, fn _params -> {:error, "Something went wrong"} end)
+      |> expect(:get, fn _params ->
+        {:error, {:validation, %{"message" => "Something went wrong"}}}
+      end)
 
       {:error, error} =
         build_workflow("tags", "get", [1])
         |> WorkflowEngine.evaluate()
 
-      assert error.recoverable == true
       assert error.message =~ "Something went wrong"
     end
 

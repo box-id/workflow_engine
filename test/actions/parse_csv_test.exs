@@ -255,8 +255,7 @@ defmodule WorkflowEngine.Actions.ParseCsvTest do
           }
         )
 
-      # INFO: is this supposed to be recoverable? likely not?
-      # assert error.recoverable == false
+      assert error.recoverable == false
       assert error.message =~ "Invalid CSV separator"
     end
   end

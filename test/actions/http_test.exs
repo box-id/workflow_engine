@@ -426,8 +426,7 @@ defmodule WorkflowEngine.Actions.HTTPTest do
 
       assert log =~ "failed with status 400"
 
-      # INFO: is this supposed to be recoverable? likely not?
-      # assert error.recoverable == false
+      assert error.recoverable == true
       assert error.message =~ "bad_request"
       assert error.message =~ "Something went wrong"
     end

@@ -175,9 +175,11 @@ defmodule WorkflowEngine do
               {:ok, state}
           end
 
-        {:error, reason} ->
-          # IDEA: Some errors/error types might be allowed in the future
+        # Handle unrecoverable errors
+        {:error, {type, _message} = reason} when type in [:validation, :parse_csv_error] ->
+          wrap_error(reason, state)
 
+        {:error, reason} ->
           wrap_error(reason, state, recoverable: true)
       end
     rescue

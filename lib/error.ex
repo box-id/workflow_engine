@@ -1,5 +1,5 @@
 defmodule WorkflowEngine.Error do
-  defexception [:message, :state]
+  defexception [:message, :state, :recoverable]
 
   def message(error) do
     """

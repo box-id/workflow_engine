@@ -17,22 +17,25 @@ defmodule WorkflowEngine do
   def evaluate(%State{} = state, %{"steps" => steps}) do
     steps_with_index = steps |> List.wrap() |> Enum.with_index()
     eval_steps(state, steps_with_index)
+  rescue
+    error ->
+      wrap_error(error, state)
   end
 
-  def evaluate(%State{} = state, steps) when is_list(steps) do
-    steps_with_index = steps |> Enum.with_index()
+  def evaluate(%State{} = state, steps) when is_list(steps) or is_map(steps) do
+    steps_with_index = steps |> List.wrap() |> Enum.with_index()
     eval_steps(state, steps_with_index)
-  end
-
-  def evaluate(%State{} = state, step) when is_map(step) do
-    steps_with_index = step |> List.wrap() |> Enum.with_index()
-    eval_steps(state, steps_with_index)
+  rescue
+    error ->
+      wrap_error(error, state)
   end
 
   def evaluate(%State{} = state, _workflow) do
-    raise WorkflowEngine.Error,
+    %WorkflowEngine.Error{
       message: "Unable to get steps from workflow",
       state: state
+    }
+    |> wrap_error(state)
   end
 
   def evaluate(workflow, opts) when is_list(opts) do
@@ -153,33 +156,30 @@ defmodule WorkflowEngine do
     # Safe to create atom from action_type because it was listed in the workflow's action map
     state = State.update_ip(state, {:action, String.to_atom(action_type)})
 
-    # IDEA: Catch exceptions and wrap them in WorkflowEngine.Error?
-    action_mod.execute(state, step)
-    |> case do
-      {:ok, {state, result}} ->
-        case Map.fetch(step, "result") do
-          {:ok, result_description} ->
-            state
-            |> State.update_ip({:action, :store_result})
-            |> store_result(result, result_description)
-            |> OK.wrap()
+    try do
+      action_mod.execute(state, step)
+      |> case do
+        {:ok, {state, result}} ->
+          case Map.fetch(step, "result") do
+            {:ok, result_description} ->
+              state
+              |> State.update_ip({:action, :store_result})
+              |> store_result(result, result_description)
+              |> OK.wrap()
 
-          :error ->
-            {:ok, state}
-        end
+            :error ->
+              {:ok, state}
+          end
 
-      {:error, reason} ->
-        # IDEA: Some errors/error types might be allowed in the future
+        {:error, %{recoverable: recoverable} = reason} ->
+          wrap_error(reason, state, recoverable: recoverable)
 
-        # Reuse WorkflowEngine.Error's state-to-string behavior
-        message =
-          %WorkflowEngine.Error{
-            message: "Workflow action failed with reason:\n#{inspect(reason)}",
-            state: state
-          }
-          |> Exception.message()
-
-        {:error, message}
+        {:error, reason} ->
+          wrap_error(reason, state, recoverable: true)
+      end
+    rescue
+      error ->
+        wrap_error(error, state)
     end
   end
 
@@ -207,4 +207,23 @@ defmodule WorkflowEngine do
       message: "Result description missing or invalid 'as'.",
       state: state
   end
+
+  # Some errors are already in a format that we can use when they're rescued during execution
+  defp wrap_error(error, state, opts \\ [])
+
+  defp wrap_error(%WorkflowEngine.Error{} = error, _state, opts),
+    do:
+      %{
+        error
+        | recoverable: Keyword.get(opts, :recoverable, false)
+      }
+      |> OK.failure()
+
+  defp wrap_error(error, state, opts),
+    do:
+      %WorkflowEngine.Error{
+        message: "Workflow action failed with reason:\n#{inspect(error)}",
+        state: state
+      }
+      |> wrap_error(state, opts)
 end

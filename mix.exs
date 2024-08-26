@@ -31,7 +31,7 @@ defmodule WorkflowEngine.MixProject do
       {:json_logic, github: "box-id/json_logic_elixir", tag: "1.0.0", only: [:dev, :test]},
       # Same for BXDK. We could use `optional: true`, but since git tags are exact, this is not
       # a suitable way of expressing a "minimum version" requirement.
-      {:bxdk, github: "box-id/bxdk", tag: "0.24.0", only: [:dev, :test]},
+      {:bxdk, github: "box-id/bxdk", tag: "0.30.0", only: [:dev, :test]},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
       {:mox, "~> 1.0", only: :test},
       {:bypass, "~> 2.1", only: :test},

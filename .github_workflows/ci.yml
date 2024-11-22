@@ -1,0 +1,51 @@
+on: push
+name: Tests
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Elixir ${{matrix.elixir}} on OTP ${{matrix.otp}}${{matrix.req == '0.3.12' && ' (+ Req 0.3)' || ''}}
+    strategy:
+      matrix:
+        otp: ["25.x", "26.x", "27.x"]
+        elixir: ["1.15.x", "1.16.x", "1.17.x"]
+        req: ["0.5.7"]
+        # Exclude incompatible combinations of OTP and Elixir
+        exclude:
+          - otp: "27.x"
+            elixir: "1.15.x"
+          - otp: "27.x"
+            elixir: "1.16.x"
+        # Include a compatibility test for Req 0.3
+        include:
+          - otp: "27.x"
+            elixir: "1.17.x"
+            req: "0.3.12"
+    env:
+      MIX_ENV: test
+    steps:
+      - name: Check out Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{matrix.otp}}
+          elixir-version: ${{matrix.elixir}}
+
+      - name: Retrieve Mix Dependencies Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Fetch Mix Dependencies
+        run: mix deps.get
+        env:
+          BX_CI_REQ_VERSION: ${{matrix.req}}
+
+      - name: Run Tests
+        run: mix test.ci

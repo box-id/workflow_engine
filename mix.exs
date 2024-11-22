@@ -8,6 +8,7 @@ defmodule WorkflowEngine.MixProject do
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      preferred_cli_env: ["test.ci": :test],
       aliases: aliases(),
       cli: cli()
     ]
@@ -48,7 +49,10 @@ defmodule WorkflowEngine.MixProject do
 
   defp aliases do
     [
-      "test.including_external": ["test --include external_service"]
+      "test.including_external": ["test --include external_service"],
+      "test.ci": ["test --color --exclude external:true"],
+      "test.ci.watch": ["test.watch --color --exclude external:true"],
+      "test.dev": ["test.watch --trace"]
     ]
   end
 end

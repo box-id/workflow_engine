@@ -37,7 +37,8 @@ defmodule WorkflowEngine.MixProject do
       {:bypass, "~> 2.1", only: :test},
       {:config_helpers, "~> 1.0"},
       {:nimble_csv, "~> 1.2.0"},
-      {:stream_split, "~> 0.1.7"}
+      {:stream_split, "~> 0.1.7"},
+      {:req, System.get_env("BX_CI_REQ_VERSION", "~> 0.3.1 or ~> 0.5.0")}
     ]
   end
 

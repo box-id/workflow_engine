@@ -250,7 +250,7 @@ defmodule WorkflowEngine.Actions.Http do
     end)
   end
 
-  @spec unwrap_response({:error, Mint.TransportError.t()} | {:ok, Req.Response.t()}, any) ::
+  @spec unwrap_response({:error, any} | {:ok, Req.Response.t()}, any) ::
           {:error, {atom, any}} | {:ok, any}
   def unwrap_response({:ok, %Req.Response{status: status, body: body}}, req) do
     if status < 400 do
@@ -265,18 +265,36 @@ defmodule WorkflowEngine.Actions.Http do
     end
   end
 
-  def unwrap_response({:error, %Mint.TransportError{} = error}, req) do
-    message = Mint.TransportError.message(error)
+  # Req returns Req.TransportError instead of Mint errors starting in version 0.5
+  if Code.ensure_loaded?(Req.TransportError) do
+    def unwrap_response({:error, %Req.TransportError{} = error}, req) do
+      message = Exception.message(error)
 
-    Logger.warning("HttpAction: #{req_to_string(req)} failed: #{message}")
+      Logger.warning("HttpAction: #{req_to_string(req)} failed: #{message}")
 
-    details = %{
-      "error" => "ENETWORK",
-      "message" => message,
-      "status" => 0
-    }
+      details = %{
+        "error" => "ENETWORK",
+        "message" => message,
+        "status" => 0
+      }
 
-    {:error, {:network_error, details}}
+      {:error, {:network_error, details}}
+    end
+  else
+    # TODO: Remove this block once we drop support for Req 0.3.x
+    def unwrap_response({:error, %Mint.TransportError{} = error}, req) do
+      message = Mint.TransportError.message(error)
+
+      Logger.warning("HttpAction: #{req_to_string(req)} failed: #{message}")
+
+      details = %{
+        "error" => "ENETWORK",
+        "message" => message,
+        "status" => 0
+      }
+
+      {:error, {:network_error, details}}
+    end
   end
 
   defp req_to_string(%Req.Request{method: method, options: options, url: url}) do

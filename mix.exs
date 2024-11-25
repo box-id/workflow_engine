@@ -50,9 +50,7 @@ defmodule WorkflowEngine.MixProject do
   defp aliases do
     [
       "test.including_external": ["test --include external_service"],
-      "test.ci": ["test --color --exclude external:true"],
-      "test.ci.watch": ["test.watch --color --exclude external:true"],
-      "test.dev": ["test.watch --trace"]
+      "test.ci": ["test --color --exclude external:true"]
     ]
   end
 end

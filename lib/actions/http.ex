@@ -250,12 +250,7 @@ defmodule WorkflowEngine.Actions.Http do
     end)
   end
 
-  @spec unwrap_response(
-          {:error, Req.TransportError.t()}
-          | {:error, Mint.TransportError.t()}
-          | {:ok, Req.Response.t()},
-          any
-        ) ::
+  @spec unwrap_response({:error, any} | {:ok, Req.Response.t()}, any) ::
           {:error, {atom, any}} | {:ok, any}
   def unwrap_response({:ok, %Req.Response{status: status, body: body}}, req) do
     if status < 400 do

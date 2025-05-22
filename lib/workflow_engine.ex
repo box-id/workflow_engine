@@ -11,7 +11,7 @@ defmodule WorkflowEngine do
     "document_ai" => Actions.DocumentAi
   }
 
-  @spec evaluate(map(), keyword()) :: {:error, any} | {:ok, State.t()}
+  @spec evaluate(map(), keyword() | map()) :: {:error, any} | {:ok, State.t()}
   def evaluate(workflow, opts_or_state \\ [])
 
   def evaluate(%State{} = state, %{"steps" => steps}) do

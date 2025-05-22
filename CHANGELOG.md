@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Unreleased changes will be displayed here upon implementation.
 
+## [1.1.1] - 2025-05-22
+
+### Fixed
+
+- Type declaration for the `evaluate` function
+
 ## [1.1.0] - 2024-11-25
 
 ### Added
@@ -25,5 +31,6 @@ Unreleased changes will be displayed here upon implementation.
 - Support for Req 0.3.x (Note that, unrelated to the changes in this library, a warning will be
   logged on every request if used together with Finch >= 0.17)
 
-[unreleased]: https://github.com/box-id/workflow_engine/compare/1.1.0...HEAD
+[unreleased]: https://github.com/box-id/workflow_engine/compare/1.1.1...HEAD
 [1.1.0]: https://github.com/box-id/workflow_engine/releases/tag/1.1.0
+[1.1.1]: https://github.com/box-id/workflow_engine/releases/tag/1.1.1

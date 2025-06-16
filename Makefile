@@ -4,8 +4,7 @@ cnf ?= config.env
 include $(cnf)
 export $(shell sed 's/=.*//' $(cnf))
 
+.PHONY: help test
+
 test:
 	mix test
-
-test-document-ai:
-	mix test test/actions/document_ai_test.exs --include external_service

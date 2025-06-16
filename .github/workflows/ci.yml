@@ -7,7 +7,7 @@ jobs:
     strategy:
       matrix:
         otp: ["25.x", "26.x", "27.x"]
-        elixir: ["1.15.x", "1.16.x", "1.17.x"]
+        elixir: ["1.15.x", "1.16.x", "1.17.x", "1.18.x"]
         req: ["0.5.7"]
         # Exclude incompatible combinations of OTP and Elixir
         exclude:

@@ -1,7 +1,6 @@
 defmodule WorkflowEngine.Action do
   @moduledoc """
-  Behavior that describes the necessary methods for an workflow action, as seen in
-  WorkflowEngine.Actions.Api.
+  Behavior that describes the necessary methods for an workflow action.
   """
 
   alias WorkflowEngine.State

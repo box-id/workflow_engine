@@ -44,26 +44,6 @@ interface ResultDescription {
 }
 ```
 
-### ApiAction
-
-Executes an action using the BXDK/Internal API SDK. Operations are encoded using `entity`, `operation` and a list of
-`args` (arguments to the function described by entity and operation). The concrete values must be looked up using the [BXDK documentation](https://intern-docs.box-id.com/sdk_internal_api_elixir/api-reference.html).
-
-```typescript
-interface ApiAction extends Action {
-  type: "api";
-  entity: string;
-  operation: string;
-  // should result in type: (string | number | boolean | Record<string, string | number | boolean>)[];
-  args: JsonLogic;
-}
-```
-
-Currently, no special attention is being paid to authentication, neither:
-
-1. That the correct client_id is used in the correct place in the action's args
-2. That the user who created the batch operation has the required permissions to execute the modification
-
 ### HTTPAction
 
 Executes a generic HTTP action.

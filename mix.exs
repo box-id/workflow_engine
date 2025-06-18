@@ -4,7 +4,7 @@ defmodule WorkflowEngine.MixProject do
   def project do
     [
       app: :workflow_engine,
-      version: "1.1.1",
+      version: "2.0.0",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -25,18 +25,14 @@ defmodule WorkflowEngine.MixProject do
   defp deps do
     [
       {:ok, "~> 2.3"},
-      {:jason, "~> 1.2"},
+      {:jason, "~> 1.4"},
       {:ex_minimatch, github: "box-id/ex_minimatch", ref: "ee65d07"},
       # Our fork of JsonLogic is used at runtime and during tests, but in production it has to be
       # provided by upstream application to avoid version conflicts
-      {:json_logic, github: "box-id/json_logic_elixir", tag: "1.0.0", only: [:dev, :test]},
-      # Same for BXDK. We could use `optional: true`, but since git tags are exact, this is not
-      # a suitable way of expressing a "minimum version" requirement.
-      {:bxdk, github: "box-id/bxdk", tag: "0.30.0", only: [:dev, :test]},
+      {:json_logic, github: "box-id/json_logic_elixir", tag: "1.2.1", only: [:dev, :test]},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
-      {:mox, "~> 1.0", only: :test},
+      {:mox, "~> 1.2", only: :test},
       {:bypass, "~> 2.1", only: :test},
-      {:config_helpers, "~> 1.0"},
       {:nimble_csv, "~> 1.2.0"},
       {:stream_split, "~> 0.1.7"},
       {:req, System.get_env("BX_CI_REQ_VERSION", "~> 0.3.1 or ~> 0.5.0")}

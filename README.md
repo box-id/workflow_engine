@@ -27,6 +27,71 @@ def deps do
 end
 ```
 
+## Extending Workflow Engine
+To extend Workflow Engine with custom actions, implement the `WorkflowEngine.Action` behaviour.
+
+This is a minimal example of a custom action that multiplies a value by a given factor and stores the result in the workflow state:
+```elixir
+defmodule MyApp.FooAction do
+  @behaviour WorkflowEngine.Action
+
+  @impl true
+  def execute(workflow_state, %{"type" => "multiply"} = step) do
+    # Implement your action logic here
+
+    multiply_by = get_required(step, "multiply_by")
+    source_key = get_required(step, "source_key")
+
+    value = Map.get(workflow_state, source_key, 1)
+
+    new_state =
+      Map.put(workflow_state, "multiply_result", value * multiply_by)
+
+    {:ok, {new_state, nil}}
+
+    
+  rescue
+    # Wrap all error messages & add current state
+    e in WorkflowEngine.Error ->
+      reraise WorkflowEngine.Error,
+              [message: "FooAction: " <> e.message, state: state],
+              __STACKTRACE__
+  end
+
+  defp get_required(step, key) do
+    case Map.fetch(step, key) do
+      {:ok, value} when not is_nil(value) ->
+        value
+
+      _ ->
+        raise WorkflowEngine.Error,
+          message: "Missing required step parameter \"#{key}\"."
+    end
+  end
+end
+```
+
+Then, setup the action in a customized module that implements the `WorkflowEngine`:
+
+```elixir
+defmodule MyAppNamespace.WorkflowEngine do
+  def evaluate(workflow, opts \\ []) do
+    state = %WorkflowEngine.State{
+      vars: Keyword.fetch!(opts, :vars),
+      actions: %{
+        "multiply" => MyApp.FooAction,
+      }
+    }
+    WorkflowEngine.evaluate(state, workflow)
+  end
+end
+
+### WorkflowEngine.State Attributes
+
+- `vars`: A map of variables that can be used in the workflow.
+- `json_logic_mod`: The module implementing the JSON Logic evaluation logic.
+- `actions`: A map of action types to their respective modules. This allows you to define custom actions that can be used in workflows.
+
 ## Error Handling
 
 Since workflows are dynamic (and potentially user-provided), Workflow Engine and its actions need

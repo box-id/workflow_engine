@@ -8,6 +8,10 @@ result_state =
     params: %{
       context: %{}
     },
+    auth: %{
+      "http" => {:bearer, "my_token"},
+      "foo" => {:bearer, "another_token"}
+    },
     json_logic: MyService.JsonLogic,
     actions: %{
       "foo" => MyApp.FooAction
@@ -90,6 +94,7 @@ end
 
 - `vars`: A map of variables that can be used in the workflow.
 - `json_logic_mod`: The module implementing the JSON Logic evaluation logic.
+- `auth`: A map of action types to their auth credentials (e.g. `%{"http" => {:bearer, "token"}}`). Each action can look up its own key from this map to authenticate outbound requests. Step-level `auth_token` takes precedence over this shared auth for the built-in HTTP action.
 - `actions`: A map of action types to their respective modules. This allows you to define custom actions that can be used in workflows.
 
 ## Error Handling

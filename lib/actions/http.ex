@@ -211,6 +211,8 @@ defmodule WorkflowEngine.Actions.Http do
     end
   end
 
+  defp get_auth(_, %{auth: %{"http" => auth}}), do: auth
+
   defp get_auth(_, _), do: nil
 
   defp get_body(step, state) do

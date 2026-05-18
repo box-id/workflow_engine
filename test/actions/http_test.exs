@@ -158,6 +158,17 @@ defmodule WorkflowEngine.Actions.HTTPTest do
   end
 
   describe "HTTP Action - Auth" do
+    test "uses wrapper auth token as bearer token", %{bypass: bypass, url: url} do
+      Bypass.expect_once(bypass, "GET", "/", fn conn ->
+        assert {"authorization", "Bearer MyToken123"} in conn.req_headers
+
+        send_json(conn, %{foo: 42})
+      end)
+
+      build_workflow(%{"url" => url})
+      |> WorkflowEngine.evaluate(auth: %{"http" => {:bearer, "MyToken123"}})
+    end
+
     test "sends static auth_token as bearer token", %{bypass: bypass, url: url} do
       Bypass.expect_once(bypass, "GET", "/", fn conn ->
         assert {"authorization", "Bearer MyToken123"} in conn.req_headers

@@ -41,6 +41,7 @@ defmodule WorkflowEngine do
       vars: %{
         "params" => Keyword.get(opts, :params, %{})
       },
+      auth: Keyword.get(opts, :auth, %{}),
       json_logic_mod: Keyword.get(opts, :json_logic, JsonLogic),
       actions: Map.merge(@builtin_actions, Keyword.get(opts, :actions, %{}))
     }

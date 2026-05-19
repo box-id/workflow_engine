@@ -157,18 +157,7 @@ defmodule WorkflowEngine.Actions.HTTPTest do
     end
   end
 
-  describe "HTTP Action - Auth" do
-    test "uses wrapper auth token as bearer token", %{bypass: bypass, url: url} do
-      Bypass.expect_once(bypass, "GET", "/", fn conn ->
-        assert {"authorization", "Bearer MyToken123"} in conn.req_headers
-
-        send_json(conn, %{foo: 42})
-      end)
-
-      build_workflow(%{"url" => url})
-      |> WorkflowEngine.evaluate(auth: %{"http" => {:bearer, "MyToken123"}})
-    end
-
+  describe "HTTP Action - Step Auth" do
     test "sends static auth_token as bearer token", %{bypass: bypass, url: url} do
       Bypass.expect_once(bypass, "GET", "/", fn conn ->
         assert {"authorization", "Bearer MyToken123"} in conn.req_headers
@@ -189,6 +178,39 @@ defmodule WorkflowEngine.Actions.HTTPTest do
 
       build_workflow(%{"url" => url, "auth_token" => %{"var" => "params.user_token"}})
       |> WorkflowEngine.evaluate(params: %{"user_token" => "MyToken123"})
+    end
+  end
+
+  describe "HTTP Action - Auth Callback" do
+    defmodule HttpAuthEngine do
+      use WorkflowEngine.Auth
+
+      @impl WorkflowEngine.Auth
+      def authenticate("http", _target) do
+        {:ok, {:bearer, "MyToken123"}}
+      end
+    end
+
+    test "uses auth from authenticate callback", %{bypass: bypass, url: url} do
+      Bypass.expect_once(bypass, "GET", "/", fn conn ->
+        assert {"authorization", "Bearer MyToken123"} in conn.req_headers
+
+        send_json(conn, %{foo: 42})
+      end)
+
+      build_workflow(%{"url" => url})
+      |> WorkflowEngine.evaluate(auth: HttpAuthEngine)
+    end
+
+    test "auth_token in step takes precedence over callback", %{bypass: bypass, url: url} do
+      Bypass.expect_once(bypass, "GET", "/", fn conn ->
+        assert {"authorization", "Bearer step-token"} in conn.req_headers
+
+        send_json(conn, %{foo: 42})
+      end)
+
+      build_workflow(%{"url" => url, "auth_token" => "step-token"})
+      |> WorkflowEngine.evaluate(auth: HttpAuthEngine)
     end
   end
 

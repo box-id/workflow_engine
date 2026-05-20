@@ -17,7 +17,9 @@ defmodule WorkflowEngine.Auth do
 
   ## Return values
     * `{:ok, nil}`: no authentication
-    * `{:ok, auth}`: action-specific auth value (e.g. `{:bearer, "token"}`)
+    * `{:ok, auth}`: action-specific auth value, passed as the `:auth` option to `Req.new/1`; see
+      [Req auth docs](https://hexdocs.pm/req/Req.html#new/1-options) for supported formats, e.g.
+      `{:bearer, token}`, `{:basic, string}`, etc.
     * `{:error, reason}`: authentication failed
   """
   @callback authenticate(type :: binary(), target :: any()) :: {:ok, any()} | {:error, any()}

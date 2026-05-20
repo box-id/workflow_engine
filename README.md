@@ -138,11 +138,12 @@ end
 | Return | Effect |
 |---|---|
 | `{:ok, nil}` | No authentication is applied |
-| `{:ok, {:bearer, token}}` | Bearer token auth (HTTP) |
+| `{:ok, auth}` | Auth value passed as the `:auth` option to [`Req.new/1`](https://hexdocs.pm/req/Req.html#new/1-options) |
 | `{:error, reason}` | Raises a `WorkflowEngine.Error` |
 
-The exact auth format depends on the action type. For HTTP, only `{:bearer, token}` is currently
-supported.
+The `auth` value supports all formats accepted by Req's `:auth` option, e.g. `{:bearer, token}`,
+`{:basic, string}`, etc. See the [Req :auth docs](https://hexdocs.pm/req/Req.html#new/1-options)
+for the full list.
 
 ### Using auth in custom actions
 

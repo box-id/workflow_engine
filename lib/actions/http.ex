@@ -17,7 +17,7 @@ defmodule WorkflowEngine.Actions.Http do
     method = get_method(step)
     url = get_url(step, state)
     params = get_params(step, state)
-    auth = get_auth(step, state)
+    auth = get_auth(step, state, url)
     {body, body_type} = get_body(step, state)
     headers = get_headers(step, body_type)
 
@@ -201,7 +201,7 @@ defmodule WorkflowEngine.Actions.Http do
 
   defp add_content_type_header(headers, _), do: headers
 
-  defp get_auth(%{"auth_token" => token}, state) do
+  defp get_auth(%{"auth_token" => token}, state, _url) do
     case token do
       token when is_binary(token) ->
         {:bearer, token}
@@ -211,7 +211,22 @@ defmodule WorkflowEngine.Actions.Http do
     end
   end
 
-  defp get_auth(_, _), do: nil
+  defp get_auth(_step, state, url) do
+    target = URI.to_string(url)
+
+    case WorkflowEngine.Auth.get_auth(state, "http", target) do
+      {:ok, nil} ->
+        nil
+
+      {:ok, auth} ->
+        auth
+
+      {:error, reason} ->
+        raise WorkflowEngine.Error,
+          state: state,
+          message: "Authentication failed: #{inspect(reason)}"
+    end
+  end
 
   defp get_body(step, state) do
     case Map.get(step, "body") do

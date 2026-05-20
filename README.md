@@ -1,6 +1,8 @@
 # WorkflowEngine
 
-Workflow Engine evaluates a series of actions and control instructions to perform requests against our internal API (using the BXDK package), tag data API, external HTTP APIs etc. using a JSON based [Workflow Language](./workflow_language.md).
+Workflow Engine evaluates a series of actions and control instructions to perform requests against
+our internal API (using the BXDK package), tag data API, external HTTP APIs etc. using a JSON
+based [Workflow Language](./workflow_language.md).
 
 ```elixir
 result_state =
@@ -8,6 +10,7 @@ result_state =
     params: %{
       context: %{}
     },
+    auth: MyApp.WorkflowEngine,
     json_logic: MyService.JsonLogic,
     actions: %{
       "foo" => MyApp.FooAction
@@ -17,7 +20,8 @@ result_state =
 
 ## Installation
 
-This package can be installed by adding `workflow_engine` to your list of dependencies in `mix.exs`:
+This package can be installed by adding `workflow_engine` to your list of dependencies in
+`mix.exs`:
 
 ```elixir
 def deps do
@@ -30,7 +34,8 @@ end
 ## Extending Workflow Engine
 To extend Workflow Engine with custom actions, implement the `WorkflowEngine.Action` behaviour.
 
-This is a minimal example of a custom action that multiplies a value by a given factor and stores the result in the workflow state:
+This is a minimal example of a custom action that multiplies a value by a given factor and stores
+the result in the workflow state:
 ```elixir
 defmodule MyApp.FooAction do
   @behaviour WorkflowEngine.Action
@@ -85,12 +90,81 @@ defmodule MyAppNamespace.WorkflowEngine do
     WorkflowEngine.evaluate(state, workflow)
   end
 end
+```
 
 ### WorkflowEngine.State Attributes
 
 - `vars`: A map of variables that can be used in the workflow.
 - `json_logic_mod`: The module implementing the JSON Logic evaluation logic.
-- `actions`: A map of action types to their respective modules. This allows you to define custom actions that can be used in workflows.
+- `auth`: A module implementing the `WorkflowEngine.Auth` behaviour (or `nil`). See
+  [Authentication](#authentication) below.
+- `actions`: A map of action types to their respective modules. This allows you to define custom
+  actions that can be used in workflows.
+
+## Authentication
+
+Authentication for workflow actions is handled via an optional callback. Instead of hardcoding
+tokens or credentials, you implement an `authenticate/2` function that is called on demand when an
+action needs auth.
+
+### Setup
+
+`use WorkflowEngine.Auth` in your wrapper module and override `authenticate/2`:
+
+```elixir
+defmodule MyApp.WorkflowEngine do
+  use WorkflowEngine.Auth
+
+  @impl WorkflowEngine.Auth
+  def authenticate("tables", _target) do
+    {:ok, {:bearer, MyApp.M2MAuth.create_service_token()}}
+  end
+
+  def authenticate(_type, _target), do: {:ok, nil}
+end
+```
+
+### Callback signature
+
+```elixir
+@callback authenticate(type :: binary(), target :: any()) :: {:ok, any()} | {:error, any()}
+```
+
+- `type`: the step's `"type"` string (e.g. `"http"`)
+- `target`: action-specific target info (for the built-in HTTP action this is the full URL string)
+
+### Return values
+
+| Return | Effect |
+|---|---|
+| `{:ok, nil}` | No authentication is applied |
+| `{:ok, auth}` | Auth value passed as the `:auth` option to [`Req.new/1`](https://hexdocs.pm/req/Req.html#new/1-options) |
+| `{:error, reason}` | Raises a `WorkflowEngine.Error` |
+
+The `auth` value supports all formats accepted by Req's `:auth` option, e.g. `{:bearer, token}`,
+`{:basic, string}`, etc. See the [Req :auth docs](https://hexdocs.pm/req/Req.html#new/1-options)
+for the full list.
+
+### Using auth in custom actions
+
+Custom actions can call `WorkflowEngine.Auth.get_auth/3` to obtain credentials:
+
+```elixir
+def execute(state, %{"type" => "my_action"} = step) do
+  target = get_target(step)
+
+  case WorkflowEngine.Auth.get_auth(state, "my_action", target) do
+    {:ok, nil} -> # proceed without auth
+    {:ok, credentials} -> # use credentials
+    {:error, reason} -> # handle error
+  end
+end
+```
+
+### Precedence
+
+For the built-in HTTP action, a step-level `auth_token` always takes precedence over the callback.
+This allows individual workflow steps to override the default auth when needed.
 
 ## Error Handling
 
